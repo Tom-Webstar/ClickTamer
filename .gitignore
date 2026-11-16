@@ -7,6 +7,13 @@
 *.dll
 *.so
 *.dylib
+clicktamer
+
+# Generated Windows icon resource (see just gen-icon)
+*.syso
+
+# Local build/release artifacts (just build / release / scoop-release)
+/dist/
 
 # Test binary, built with `go test -c`
 *.test
@@ -28,6 +35,16 @@ go.work.sum
 # env file
 .env
 
+# Git worktrees
+.worktrees/
+
 # Editor/IDE
 # .idea/
 # .vscode/
+clicktamer.log
+
+# Private LEFT-unlock capture: device IDs and the server reply (never commit)
+clicktamer-with-an-unlock.log
+
+# Zwift session token created by the TUI sign-in (never commit)
+zwift-token.json

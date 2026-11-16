@@ -1,0 +1,27 @@
+{
+  "branches": [
+    "main",
+    { "name": "dev", "channel": "dev", "prerelease": "dev" }
+  ],
+  "tagFormat": "${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "just release ${nextRelease.version}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "dist/clicktamer.exe", "label": "clicktamer.exe" },
+          { "path": "dist/clicktamer.zip", "label": "clicktamer.zip (exe)" },
+          { "path": "dist/checksums.txt", "label": "checksums.txt (sha256)" }
+        ]
+      }
+    ]
+  ]
+}

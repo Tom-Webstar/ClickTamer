@@ -1,0 +1,195 @@
+name: Release
+
+# semantic-release: conventional commits on main decide the next semver
+# (feat -> minor, fix/perf -> patch, BREAKING CHANGE -> major), tag X.Y.Z,
+# create the GitHub Release, and attach the Windows build.
+# Runs only after the CI checks pass on the same commit.
+on:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tag + release
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.detect.outputs.published }}
+      tag: ${{ steps.detect.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # semantic-release needs full history + tags
+          persist-credentials: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: extractions/setup-just@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      # No baseline tag is seeded: with no prior semver tag semantic-release's
+      # first release is 1.0.0 regardless of commit types. Seeding a 1.0.0 tag
+      # instead made it the "previous release", so the first `feat` shipped
+      # 1.1.0. Pre-existing non-semver tags (STABLE*) are ignored.
+      - name: Capture pre-release tag
+        id: before
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+      # No baseline tag is seeded: with no prior semver tag semantic-release's
+      # first release is 1.0.0 regardless of commit types. Seeding a 1.0.0 tag
+      # instead made it the "previous release", so the first `feat` shipped
+      # 1.1.0. Pre-existing non-semver tags (STABLE*) are ignored.
+      - name: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          npx --yes
+          -p semantic-release@25
+          -p @semantic-release/exec@7
+          semantic-release
+      - name: Detect new release
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEFORE: ${{ steps.before.outputs.tag }}
+        run: |
+          for i in 1 2 3; do
+            after=$(gh release list --limit 1 --json tagName -q '.[0].tagName') && break
+            sleep 3
+          done
+          [ -n "$after" ] || { echo "could not read the latest release"; exit 1; }
+          if [ -n "$after" ] && [ "$after" != "$BEFORE" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$after" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Personal scoop bucket: this repo IS the bucket (scoop bucket add <name>
+  # <repo-url>), so the manifest is committed straight back to main on every
+  # release — no PAT, no PR. Independent of the Extras job below.
+  bucket:
+    needs: release
+    if: needs.release.outputs.published == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the manifest commit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true # push back with GITHUB_TOKEN
+      - uses: extractions/setup-just@v4
+      - name: Read the release checksum
+        id: hash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
+          sha=$(awk '$2 == "clicktamer.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
+          [ -n "$sha" ] || { echo "no clicktamer.exe hash in checksums.txt"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Render bucket manifest
+        run: |
+          just scoop-manifest \
+            "${{ needs.release.outputs.tag }}" \
+            "${{ steps.hash.outputs.sha }}" \
+            > bucket/clicktamer.json
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/
+          if git diff --cached --quiet; then
+            echo "bucket manifest already up to date"
+          else
+            git commit -m "chore: update bucket manifest for ${{ needs.release.outputs.tag }}"
+            git push origin HEAD:main
+          fi
+
+  # scoop:
+  #   needs: release
+  #   if: needs.release.outputs.published == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # create-pull-request does NOT fall back to GITHUB_TOKEN when the token
+  #     # input is empty, and GITHUB_TOKEN cannot push to another owner's fork
+  #     # anyway. Fail early with an actionable message instead of the action's
+  #     # cryptic "Input 'token' not supplied".
+  #     - name: Require SCOOP_EXTRAS_PAT
+  #       env:
+  #         SCOOP_EXTRAS_PAT: ${{ secrets.SCOOP_EXTRAS_PAT }}
+  #       run: |
+  #         if [ -z "$SCOOP_EXTRAS_PAT" ]; then
+  #           echo "::error::Secret SCOOP_EXTRAS_PAT is not set. Add a classic PAT with 'repo' scope, owned by a user who has forked ScoopInstaller/Extras, as the repository secret SCOOP_EXTRAS_PAT."
+  #           exit 1
+  #         fi
+  #     - uses: actions/checkout@v7
+  #     - uses: extractions/setup-just@v4
+  #     - name: Checkout ScoopInstaller/Extras
+  #       uses: actions/checkout@v7
+  #       with:
+  #         repository: ScoopInstaller/Extras
+  #         ref: master
+  #         path: extras
+  #         persist-credentials: false
+  #     - name: Read the release checksum
+  #       id: hash
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       run: |
+  #         gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
+  #         sha=$(awk '$2 == "clicktamer.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
+  #         [ -n "$sha" ] || { echo "no clicktamer.exe hash in checksums.txt"; exit 1; }
+  #         echo "sha=$sha" >> "$GITHUB_OUTPUT"
+  #     - name: Render manifest
+  #       run: |
+  #         just scoop-manifest \
+  #           "${{ needs.release.outputs.tag }}" \
+  #           "${{ steps.hash.outputs.sha }}" \
+  #           > extras/bucket/clicktamer.json
+  #     - name: Create pull request
+  #       id: cpr
+  #       uses: peter-evans/create-pull-request@v8
+  #       with:
+  #         token: ${{ secrets.SCOOP_EXTRAS_PAT }}
+  #         path: extras
+  #         push-to-fork: ${{ github.repository_owner }}/Extras
+  #         base: master
+  #         branch: clicktamer-${{ needs.release.outputs.tag }}
+  #         commit-message: "clicktamer ${{ needs.release.outputs.tag }}"
+  #         title: "clicktamer@${{ needs.release.outputs.tag }}: Add version ${{ needs.release.outputs.tag }}"
+  #         body: |
+  #           Adds the clicktamer ${{ needs.release.outputs.tag }} manifest.
+
+  #           - Asset: `clicktamer.exe`
+  #           - sha256: `${{ steps.hash.outputs.sha }}`
+  #           - Homepage: https://github.com/Tom-Webstar/clicktamer
+
+  #           Generated automatically on release. See the
+  #           [contributing guide](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md).
+  #         delete-branch: true
+  #     # The CONTRIBUTING guide asks for a "/verify" comment after raising the
+  #     # PR to kick off the manifest verifier. Fork PRs (ours comes from
+  #     # <owner>/Extras) cannot be auto-verified on open, so the comment is the
+  #     # only trigger.
+  #     - name: Ask Scoop to verify the manifest
+  #       if: steps.cpr.outputs.pull-request-number != ''
+  #       env:
+  #         GH_TOKEN: ${{ secrets.SCOOP_EXTRAS_PAT }}
+  #       run: gh pr comment "${{ steps.cpr.outputs.pull-request-number }}" --repo ScoopInstaller/Extras --body "/verify"
