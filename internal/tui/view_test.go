@@ -154,7 +154,7 @@ func TestViewLogPanel(t *testing.T) {
 	cfg.Logs = logs
 	m := on(cfg, PodConnected, PodConnected)
 	lacks(t, m.View(), "hello-from-slog")
-	has(t, m.View(), "ctrl+l logs")
+	has(t, m.View(), "ctrl+l show logs")
 	m.showLogs = true
 	has(t, m.View(), "hello-from-slog", "Logs")
 }
@@ -208,7 +208,7 @@ func TestViewLogPanelWiderThanCards(t *testing.T) {
 }
 
 func TestViewFooterOpenConfigHint(t *testing.T) {
-	has(t, on(openCfg(func() error { return nil }), PodConnected, PodConnected).View(), "ctrl+e edit")
+	has(t, on(openCfg(func() error { return nil }), PodConnected, PodConnected).View(), "ctrl+e edit config")
 	lacks(t, on(testCfg(), PodConnected, PodConnected).View(), "edit")
 }
 
@@ -216,7 +216,7 @@ func TestViewFooterProfileSwitchHint(t *testing.T) {
 	cfg := testCfg()
 	cfg.SwitchProfile = func(int) {}
 	cfg.Profiles = []string{"a", "b"}
-	has(t, on(cfg, PodConnected, PodConnected).View(), "ctrl+←/→ profile")
+	has(t, on(cfg, PodConnected, PodConnected).View(), "ctrl+←/→ OR p/n prev/next profile")
 
 	// A single profile hides the hint even though switching is wired.
 	one := testCfg()
@@ -233,23 +233,23 @@ func TestViewFooterActionHints(t *testing.T) {
 	cfg.LaunchProgram = func() error { return nil }
 	cfg.StartProgram = "MyWhooshHD.exe"
 	v := on(cfg, PodConnected, PodConnected).View()
-	has(t, v, "ctrl+r reload", "ctrl+s start")
+	has(t, v, "ctrl+r reload profile", "ctrl+s start program")
 
 	// The reload hint is hidden without the callback, the start hint without a
 	// program on the active profile.
-	lacks(t, on(testCfg(), PodConnected, PodConnected).View(), "ctrl+r reload", "ctrl+s start")
+	lacks(t, on(testCfg(), PodConnected, PodConnected).View(), "ctrl+r reload profile", "ctrl+s start program")
 	cfg.StartProgram = ""
-	lacks(t, on(cfg, PodConnected, PodConnected).View(), "ctrl+s start")
+	lacks(t, on(cfg, PodConnected, PodConnected).View(), "ctrl+s start program")
 }
 
 func TestViewFooterSignInHint(t *testing.T) {
-	// A wired login advertises the "ctrl+z" sign-in shortcut in the footer.
+	// A wired login advertises the "ctrl+z" zwift sign-in shortcut in the footer.
 	auth := testCfg()
 	auth.Auth = AuthConfig{Login: func(string, string) error { return nil }}
-	has(t, on(auth, PodConnected, PodConnected).View(), "ctrl+z sign in")
+	has(t, on(auth, PodConnected, PodConnected).View(), "ctrl+z zwift sign in")
 
 	// No login wired (demo): the shortcut is inert, so the footer hides it.
-	lacks(t, on(testCfg(), PodConnected, PodConnected).View(), "ctrl+z sign in")
+	lacks(t, on(testCfg(), PodConnected, PodConnected).View(), "ctrl+z zwift sign in")
 }
 
 // The header carries the four-dot pod mark in front of the title, all on one
@@ -557,6 +557,6 @@ func TestViewFooterFitsCardWidth(t *testing.T) {
 			t.Fatalf("footer line is %d cells, card inner width is %d", w, m.innerWidth())
 		}
 	}
-	has(t, m.View(), "ctrl+l logs", "ctrl+e edit", "ctrl+r reload", "ctrl+s start",
-		"ctrl+←/→ profile", "ctrl+z sign in", "ctrl+c quit")
+	has(t, m.View(), "ctrl+l show logs", "ctrl+e edit config", "ctrl+r reload profile", "ctrl+s start program",
+		"ctrl+←/→ OR p/n prev/next profile", "ctrl+z zwift sign in", "ctrl+c quit")
 }
