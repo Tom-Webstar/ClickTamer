@@ -1,0 +1,18 @@
+14 November 2026
+
+BikeTerra was not accepting keypresses sent via this app
+I think BikeTerra reads low-level hardware scan codes directly from the keyboard driver rather than listening for high level WM_KEYDOWN messages. Hence it was not working correctly with original code that was probably only passing virtual key codes and only passing 0 as hardware scan codes
+
+Changes
+Changed from Keybd_event to SendInput for sending keypresses
+Implemented KEYEVENTF_SCANCODE alongside MapVirtualKeyW to populate the hardware scan codes
+
+Expands %LOCALAPPDATA% and other Windows environment variables before checking whether the executable exists and launching it.
+
+Changes the hotkey to toggle modes from Ctrl+M to Ctrl+K. Due to Ctrl+M not working, perhaps being intrepreted as 'Enter' by the terminal.
+
+Amended the base profile for BikeTerra
+
+Updated the descriptions for Hotkeys
+
+Implemented winres method for embedding icon into binary
