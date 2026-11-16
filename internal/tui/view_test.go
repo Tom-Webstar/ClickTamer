@@ -553,7 +553,7 @@ func TestViewFooterFitsCardWidth(t *testing.T) {
 		t.Fatalf("full footer should stay on two lines at %d cells:\n%s", m.innerWidth(), footer)
 	}
 	for _, line := range strings.Split(footer, "\n") {
-		if w := ansi.StringWidth(line); w > 2 * m.innerWidth() {
+		if w := ansi.StringWidth(line); w > (2 * m.innerWidth()) {
 			t.Fatalf("footer line is %d cells, card inner width is %d", w, m.innerWidth())
 		}
 	}
