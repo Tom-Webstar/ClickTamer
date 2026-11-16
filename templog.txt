@@ -9,7 +9,7 @@ Implemented KEYEVENTF_SCANCODE alongside MapVirtualKeyW to populate the hardware
 
 Expands %LOCALAPPDATA% and other Windows environment variables before checking whether the executable exists and launching it.
 
-Changes the hotkey to toggle modes from Ctrl+M to Ctrl+K. Due to Ctrl+M not working, perhaps being intrepreted as 'Enter' by the terminal.
+Changes the hotkey to toggle modes from Ctrl+m to Ctrl+k. Due to Ctrl+m not working, perhaps being intrepreted as 'Enter' by the terminal.
 
 Amended the base profile for BikeTerra
 

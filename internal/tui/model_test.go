@@ -578,12 +578,12 @@ func TestLogViewShowsScrolledWindow(t *testing.T) {
 	lacks(t, v, "line19")
 }
 
-// "ctrl+m" runs the wired toggle in a command, so the render loop never blocks.
+// "ctrl+k" runs the wired toggle in a command, so the render loop never blocks.
 func TestToggleModeKeyRunsCallback(t *testing.T) {
 	calls := 0
 	cfg := testCfg()
 	cfg.ToggleMode = func() { calls++ }
-	_, cmd := New(cfg).Update(ctrlKey("m"))
+	_, cmd := New(cfg).Update(ctrlKey("k"))
 	if cmd == nil {
 		t.Fatal("m should return a command")
 	}
@@ -593,9 +593,9 @@ func TestToggleModeKeyRunsCallback(t *testing.T) {
 	}
 }
 
-// Without a wired toggle "ctrl+m" does nothing.
+// Without a wired toggle "ctrl+k" does nothing.
 func TestToggleModeKeyInertWithoutCallback(t *testing.T) {
-	_, cmd := New(testCfg()).Update(ctrlKey("m"))
+	_, cmd := New(testCfg()).Update(ctrlKey("k"))
 	if cmd != nil {
 		t.Fatal("m without a toggle should return no command")
 	}
