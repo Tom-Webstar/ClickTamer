@@ -36,10 +36,10 @@ build: gen-icon
         -o dist/clicktamer.exe .
 
 # Local: formats, then checks + builds.
-# sanity: fmt test vet build
+sanity: fmt test vet build
 
 # CI: check-only, no rewrites.
-ci: fmt-check vet build # was vet test built
+ci: fmt-check vet test build
 
 # --- release (needs zip + sha256sum: Ubuntu CI + local) -------------------
 

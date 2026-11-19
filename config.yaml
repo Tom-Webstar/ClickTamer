@@ -71,8 +71,8 @@ loglevel: info
 # Gear shift: PLUS = shift down; B (right pod) and MIN (left pod) = shift up.
 profiles:
 
-  # Start notepad. Both pods are mapped: the left pod's arrows and minus
-  # type l u r d m, the right pod's buttons type a b y z p.
+  # In Notepad the left pod's arrows move the cursor and MIN types m.
+  # The right pod's buttons type a b y z p.
   notepad:
     single:
       PLUS: p
@@ -81,10 +81,10 @@ profiles:
       Y: y
       Z: z
     double:
-      LEFT: l           # left pod: arrow left
-      UP: u             # left pod: arrow up
-      RIGHT: r          # left pod: arrow right
-      DOWN: d           # left pod: arrow down
+      LEFT: left
+      UP: up
+      RIGHT: right
+      DOWN: down
       MIN: m            # left pod: minus
       PLUS: p
       A: a
@@ -227,7 +227,7 @@ profiles:
 
   # Biketerra: W/S shift the virtual drivetrain (official virtual-shifting
   # help), arrows navigate the menu, U toggles the UI.
- biketerra:
+  biketerra:
     single:
       PLUS: s # shift to an easier gear
       A: right # menu / steer right

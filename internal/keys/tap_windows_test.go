@@ -78,6 +78,8 @@ func TestScanCodeEncoding(t *testing.T) {
 		{"S up", 0x53, 0x1F, keyEventKeyUp, 0, 0x1F, keyEventScanCode | keyEventKeyUp},
 		{"left arrow", 0x25, 0xE04B, 0, 0, 0x4B, keyEventScanCode | keyEventExtendedKey},
 		{"right arrow up", 0x27, 0xE04D, keyEventKeyUp, 0, 0x4D, keyEventScanCode | keyEventExtendedKey | keyEventKeyUp},
+		{"numpad 4", 0x64, 0x4B, 0, 0, 0x4B, keyEventScanCode},
+		{"left arrow without a mapping", 0x25, 0, 0, 0, 0x4B, keyEventScanCode | keyEventExtendedKey},
 		{"unknown mapping fallback", 0x57, 0, 0, 0x57, 0, 0},
 		{"E1 prefix fallback", 0x13, 0xE145, 0, 0x13, 0, 0},
 	}
@@ -87,6 +89,35 @@ func TestScanCodeEncoding(t *testing.T) {
 			ki := *(*keyboardInput)(unsafe.Pointer(&in.data))
 			if in.typ != inputKeyboard || ki.vk != tc.wantVK || ki.scan != tc.wantScan || ki.flags != tc.wantFlags {
 				t.Fatalf("got type=%d KEYBDINPUT=%+v, want vk=%#x scan=%#x flags=%#x", in.typ, ki, tc.wantVK, tc.wantScan, tc.wantFlags)
+			}
+		})
+	}
+}
+
+func TestDedicatedArrowKeys(t *testing.T) {
+	for _, arrow := range []struct {
+		name string
+		vk   uint16
+		scan uint16
+	}{
+		{"left", 0x25, 0x4B},
+		{"up", 0x26, 0x48},
+		{"right", 0x27, 0x4D},
+		{"down", 0x28, 0x50},
+	} {
+		t.Run(arrow.name, func(t *testing.T) {
+			b, err := Resolve(arrow.name)
+			if err != nil || b.VK != arrow.vk {
+				t.Fatalf("Resolve(%q) = %#x, %v; want VK %#x", arrow.name, b.VK, err, arrow.vk)
+			}
+			for _, flags := range []uint32{0, keyEventKeyUp} {
+				// Windows can return the same bare scan for an arrow and its keypad twin.
+				in := newScanKeyboardInput(b.VK, uint32(arrow.scan), flags)
+				ki := (*keyboardInput)(unsafe.Pointer(&in.data))
+				wantFlags := flags | keyEventScanCode | keyEventExtendedKey
+				if ki.scan != arrow.scan || ki.flags != wantFlags {
+					t.Errorf("scan=%#x flags=%#x, want scan=%#x flags=%#x", ki.scan, ki.flags, arrow.scan, wantFlags)
+				}
 			}
 		})
 	}

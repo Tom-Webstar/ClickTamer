@@ -273,7 +273,7 @@ clicktamer [flags]
 | `biketerra`     | `S`/`W` gear down/up, `A`/`Z` menu right/left, `Y` UI toggle                                          | [Biketerra virtual shifting](https://biketerra.com/help-center/virtual-shifting)                                                                        |
 | `rouvy`         | `,`/`.` gear down/up, `A`/`Z` turn right/left, `Y` hide interface                                     | [Rouvy remote controllers](https://support.rouvy.com/hc/en-us/articles/47742964491665-Remote-controllers-and-control-mapping)                           |
 | `tacx`          | `+`/`B` difficulty down/up, `A`/`Z` next/previous screen, `Y` pause                                   | [Tacx keyboard shortcuts](https://support.garmin.com/en-US/?faq=aFNaNhVBpF1wKTKB40LYg7)                                                                 |
-| `notepad`       | `+ p`, `A a`, `B b`, `Y y`, `Z z`, plus the left pod's `LEFT l`, `UP u`, `RIGHT r`, `DOWN d`, `MIN m` | focuses `Notepad` and starts it — the shipped default                                                                                                   |
+| `notepad`       | Left pod arrows move the cursor, `MIN` types `m`. Right pod types `p`, `a`, `b`, `y`, `z` for `+`, `A`, `B`, `Y`, `Z`. | focuses `Notepad` and starts it — the shipped default                                                                                                   |
 
 Every shipped profile has a `double:` map that adds the LEFT pod's arrows (`LEFT UP RIGHT DOWN`) and its `MIN` shift-up key. In single mode the profile keeps only the right pod's buttons. `notepad` maps all five left-pod buttons.
 

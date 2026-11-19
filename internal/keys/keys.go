@@ -36,12 +36,19 @@ type Binding struct {
 	Token string // as written in config.yaml, for logging
 }
 
+const (
+	vkLeft  uint16 = 0x25
+	vkUp    uint16 = 0x26
+	vkRight uint16 = 0x27
+	vkDown  uint16 = 0x28
+)
+
 // namedKeys maps config tokens to Windows virtual-key codes.
 var namedKeys = map[string]uint16{
-	"up":        0x26, // VK_UP
-	"down":      0x28, // VK_DOWN
-	"left":      0x25, // VK_LEFT
-	"right":     0x27, // VK_RIGHT
+	"up":        vkUp,
+	"down":      vkDown,
+	"left":      vkLeft,
+	"right":     vkRight,
 	"enter":     0x0D, // VK_RETURN
 	"space":     0x20, // VK_SPACE
 	"tab":       0x09, // VK_TAB
