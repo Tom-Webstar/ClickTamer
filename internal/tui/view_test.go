@@ -534,8 +534,7 @@ func TestViewFooterToggleModeHint(t *testing.T) {
 	lacks(t, on(testCfg(), PodConnected, PodConnected).View(), "ctrl+k mode")
 }
 
-// The full footer (every shortcut wired) wraps inside the card width, so no
-// line runs past the panels and no shortcut is dropped.
+// At maximum card width, the full footer wraps onto two lines.
 func TestViewFooterFitsCardWidth(t *testing.T) {
 	cfg := doubleCfg()
 	cfg.OpenConfig = func() error { return nil }
@@ -549,11 +548,12 @@ func TestViewFooterFitsCardWidth(t *testing.T) {
 	m := on(cfg, PodConnected, PodConnected)
 	m.width = 300
 	footer := m.footer()
-	// if strings.Contains(footer, "\n") {
-	// 	t.Fatalf("full footer should stay on two lines at %d cells:\n%s", m.innerWidth(), footer)
-	// }
-	for _, line := range strings.Split(footer, "\n") {
-		if w := ansi.StringWidth(line); w > (2 * m.innerWidth()) {
+	lines := strings.Split(footer, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("full footer has %d lines at %d cells, want 2:\n%s", len(lines), m.innerWidth(), footer)
+	}
+	for _, line := range lines {
+		if w := ansi.StringWidth(line); w > m.innerWidth() {
 			t.Fatalf("footer line is %d cells, card inner width is %d", w, m.innerWidth())
 		}
 	}
