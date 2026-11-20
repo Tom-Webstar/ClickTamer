@@ -73,6 +73,21 @@ func newKeyboardInput(vk uint16, flags uint32) input {
 	return in
 }
 
+// MapVirtualKeyW can return keypad scans for navigation keys. Their dedicated
+// physical keys use the same low byte with an E0 prefix, regardless of Num Lock.
+var navigationScanCodes = map[uint16]uint32{
+	vkLeft:     0xE04B,
+	vkUp:       0xE048,
+	vkRight:    0xE04D,
+	vkDown:     0xE050,
+	vkInsert:   0xE052,
+	vkDelete:   0xE053,
+	vkHome:     0xE047,
+	vkEnd:      0xE04F,
+	vkPageUp:   0xE049,
+	vkPageDown: 0xE051,
+}
+
 // newScanKeyboardInput constructs a physical-scan-code event. Chromium uses
 // the scan code to populate KeyboardEvent.code. Virtual-key-only SendInput
 // events can have a zero scan code, which some web apps cannot match reliably.
@@ -80,17 +95,8 @@ func newKeyboardInput(vk uint16, flags uint32) input {
 // Other keys fall back to virtual keys when a scan-code mapping is unavailable or uses
 // the uncommon E1 prefix (which cannot be represented by this INPUT layout).
 func newScanKeyboardInput(vk uint16, mappedScan uint32, flags uint32) input {
-	// MapVirtualKeyW can return the unprefixed keypad scan for an arrow VK.
-	// Send the dedicated arrow scan so Windows derives the matching VK as well.
-	switch vk {
-	case vkLeft:
-		mappedScan = 0xE04B
-	case vkUp:
-		mappedScan = 0xE048
-	case vkRight:
-		mappedScan = 0xE04D
-	case vkDown:
-		mappedScan = 0xE050
+	if dedicatedScan, ok := navigationScanCodes[vk]; ok {
+		mappedScan = dedicatedScan
 	}
 	prefix := (mappedScan >> 8) & 0xff
 	scan := uint16(mappedScan & 0xff)

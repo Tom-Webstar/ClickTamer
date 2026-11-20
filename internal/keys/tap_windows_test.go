@@ -79,7 +79,9 @@ func TestScanCodeEncoding(t *testing.T) {
 		{"left arrow", 0x25, 0xE04B, 0, 0, 0x4B, keyEventScanCode | keyEventExtendedKey},
 		{"right arrow up", 0x27, 0xE04D, keyEventKeyUp, 0, 0x4D, keyEventScanCode | keyEventExtendedKey | keyEventKeyUp},
 		{"numpad 4", 0x64, 0x4B, 0, 0, 0x4B, keyEventScanCode},
+		{"numpad 9", 0x69, 0x49, 0, 0, 0x49, keyEventScanCode},
 		{"left arrow without a mapping", 0x25, 0, 0, 0, 0x4B, keyEventScanCode | keyEventExtendedKey},
+		{"page up without a mapping", 0x21, 0, 0, 0, 0x49, keyEventScanCode | keyEventExtendedKey},
 		{"unknown mapping fallback", 0x57, 0, 0, 0x57, 0, 0},
 		{"E1 prefix fallback", 0x13, 0xE145, 0, 0x13, 0, 0},
 	}
@@ -94,8 +96,8 @@ func TestScanCodeEncoding(t *testing.T) {
 	}
 }
 
-func TestDedicatedArrowKeys(t *testing.T) {
-	for _, arrow := range []struct {
+func TestDedicatedNavigationKeys(t *testing.T) {
+	for _, key := range []struct {
 		name string
 		vk   uint16
 		scan uint16
@@ -104,19 +106,25 @@ func TestDedicatedArrowKeys(t *testing.T) {
 		{"up", 0x26, 0x48},
 		{"right", 0x27, 0x4D},
 		{"down", 0x28, 0x50},
+		{"insert", 0x2D, 0x52},
+		{"delete", 0x2E, 0x53},
+		{"home", 0x24, 0x47},
+		{"end", 0x23, 0x4F},
+		{"pageup", 0x21, 0x49},
+		{"pagedown", 0x22, 0x51},
 	} {
-		t.Run(arrow.name, func(t *testing.T) {
-			b, err := Resolve(arrow.name)
-			if err != nil || b.VK != arrow.vk {
-				t.Fatalf("Resolve(%q) = %#x, %v; want VK %#x", arrow.name, b.VK, err, arrow.vk)
+		t.Run(key.name, func(t *testing.T) {
+			b, err := Resolve(key.name)
+			if err != nil || b.VK != key.vk {
+				t.Fatalf("Resolve(%q) = %#x, %v; want VK %#x", key.name, b.VK, err, key.vk)
 			}
 			for _, flags := range []uint32{0, keyEventKeyUp} {
-				// Windows can return the same bare scan for an arrow and its keypad twin.
-				in := newScanKeyboardInput(b.VK, uint32(arrow.scan), flags)
+				// Windows can return the same bare scan for a navigation key and its keypad twin.
+				in := newScanKeyboardInput(b.VK, uint32(key.scan), flags)
 				ki := (*keyboardInput)(unsafe.Pointer(&in.data))
 				wantFlags := flags | keyEventScanCode | keyEventExtendedKey
-				if ki.scan != arrow.scan || ki.flags != wantFlags {
-					t.Errorf("scan=%#x flags=%#x, want scan=%#x flags=%#x", ki.scan, ki.flags, arrow.scan, wantFlags)
+				if ki.scan != key.scan || ki.flags != wantFlags {
+					t.Errorf("scan=%#x flags=%#x, want scan=%#x flags=%#x", ki.scan, ki.flags, key.scan, wantFlags)
 				}
 			}
 		})

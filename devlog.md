@@ -1,4 +1,22 @@
-# ClickTamer handoff
+# Devlog
+
+Changed logo
+
+## 2026-11-20 — Dedicated scans for the six navigation keys
+
+The Windows encoder now uses one table of dedicated scans for the four arrows and the six navigation keys. Insert is E0 52, Delete E0 53, Home E0 47, End E0 4F, Page Up E0 49 and Page Down E0 51 (hex). Press and repeat use flags 09. Release uses 0B. Existing profile tokens select these keys automatically.
+
+The regression test reproduced the missing extended flag for each of the six keys before the fix. Afterward all nine Go packages passed, `go vet ./...` passed, and Windows returned the expected key names and VKs for all six encoded presses and releases. The Windows amd64 build is available at `dist/clicktamer.exe`. Exit the running copy before launching this build for an in-game check.
+
+The implementation and regression tests are in the working tree. Git denied creation of `.git/index.lock` when staging. Commit the navigation change with write access to the repository metadata, preserving the pre-existing order edit in `internal/keys/keys.go` and the user's separate icon edits.
+
+## 2026-11-20 — Other extended keys in namedKeys
+
+Checked the working tree at `f9d8360` on Windows. A temporary Go test passed each `namedKeys` entry through `Resolve`, `MapVirtualKeyW` and `newScanKeyboardInput`, and queried the resulting Windows key name for the encoded scan. Press and release used the same scan and extended flag for every entry.
+
+Before the fix, only the four arrows forced dedicated E0 scans. On this machine Insert, Delete, Home, End, Page Up and Page Down used bare scans 52, 53, 47, 4F, 49 and 51 respectively (hex). Windows identified them as Num 0, Num Decimal, Num 7, Num 1, Num 9 and Num 3. The shipped Zwift profile uses Page Up and Page Down for workout FTP bias. Generic Ctrl and Alt mapped to their left-hand keys. Enter and slash mapped to the main keyboard.
+
+
 
 ## 2026-11-19 — Dedicated arrow keys
 

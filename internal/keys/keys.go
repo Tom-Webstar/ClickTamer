@@ -37,10 +37,16 @@ type Binding struct {
 }
 
 const (
-	vkLeft  uint16 = 0x25
-	vkUp    uint16 = 0x26
-	vkRight uint16 = 0x27
-	vkDown  uint16 = 0x28
+	vkLeft     uint16 = 0x25
+	vkUp       uint16 = 0x26
+	vkRight    uint16 = 0x27
+	vkDown     uint16 = 0x28
+	vkInsert   uint16 = 0x2D
+	vkDelete   uint16 = 0x2E
+	vkHome     uint16 = 0x24
+	vkEnd      uint16 = 0x23
+	vkPageUp   uint16 = 0x21 // VK_PRIOR
+	vkPageDown uint16 = 0x22 // VK_NEXT
 )
 
 // namedKeys maps config tokens to Windows virtual-key codes.
@@ -49,18 +55,18 @@ var namedKeys = map[string]uint16{
 	"down":      vkDown,
 	"left":      vkLeft,
 	"right":     vkRight,
+	"insert":    vkInsert,
+	"delete":    vkDelete,
+	"home":      vkHome,
+	"end":       vkEnd,
+	"pageup":    vkPageUp,
+	"pagedown":  vkPageDown,
 	"enter":     0x0D, // VK_RETURN
 	"space":     0x20, // VK_SPACE
 	"tab":       0x09, // VK_TAB
 	"esc":       0x1B, // VK_ESCAPE
 	"escape":    0x1B,
 	"backspace": 0x08, // VK_BACK
-	"delete":    0x2E, // VK_DELETE
-	"insert":    0x2D, // VK_INSERT
-	"home":      0x24, // VK_HOME
-	"end":       0x23, // VK_END
-	"pageup":    0x21, // VK_PRIOR
-	"pagedown":  0x22, // VK_NEXT
 	"shift":     0x10, // VK_SHIFT
 	"ctrl":      0x11, // VK_CONTROL
 	"alt":       0x12, // VK_MENU
