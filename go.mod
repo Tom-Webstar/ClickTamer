@@ -3,6 +3,7 @@ module clicktamer
 go 1.27.1
 
 require (
+	github.com/bendahl/uinput v0.0.0
 	charm.land/bubbletea/v2 v2.1.2
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.11.10
@@ -42,3 +43,6 @@ require (
 	golang.org/x/sync v0.25.0 // indirect
 	tinygo.org/x/espradio v0.5.0 // indirect
 )
+
+// Use the Linux uinput driver already included in this repository.
+replace github.com/bendahl/uinput => ./internal/uinput
