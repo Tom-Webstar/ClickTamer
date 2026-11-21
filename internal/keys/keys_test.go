@@ -34,3 +34,22 @@ func TestWindowTargetSetGet(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestExtendedNamedKeyValues(t *testing.T) {
+	cases := map[string]uint16{
+		"left": 0x25, "up": 0x26, "right": 0x27, "down": 0x28,
+		"insert": 0x2D, "delete": 0x2E, "home": 0x24, "end": 0x23,
+		"pageup": 0x21, "pagedown": 0x22,
+	}
+	if len(extended_namedkeys) != len(cases) {
+		t.Fatalf("extended_namedkeys has %d keys, want %d", len(extended_namedkeys), len(cases))
+	}
+	for name, vk := range cases {
+		if got, ok := namedKeys[name]; !ok || got != vk {
+			t.Errorf("namedKeys[%q] = %#x (found %t), want %#x", name, got, ok, vk)
+		}
+		if !extended_namedkeys[vk] {
+			t.Errorf("extended_namedkeys missing %#x for %s", vk, name)
+		}
+	}
+}
