@@ -65,8 +65,10 @@ tar -xzf clicktamer-linux-amd64.tar.gz
 ```
 
 Linux needs a running BlueZ service, an enabled Bluetooth adapter, and write
-access to `/dev/uinput` for your user. If the device is missing, load the
-`uinput` module with `sudo modprobe uinput`. Use your distribution's device
+access to `/dev/uinput` for your user. For example, by providing permission 
+for the current user with `sudo setfacl -m u:$USER:rw /dev/uinput` .
+If the device is missing, load the `uinput` module with
+`sudo modprobe uinput`. Use your distribution's device
 permissions to grant access. Open and focus your cycling app manually.
 ClickTamer sends keys to the focused window. Automatic launch and window
 targeting are Windows features.
