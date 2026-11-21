@@ -12,8 +12,7 @@ import (
 )
 
 // defaultConfig is the shipped config.yaml, compiled into the binary so a
-// lone clicktamer.exe is self-sufficient: on first run it is written to
-// %LocalAppData%\clicktamer\config.yml for the user to edit.
+// standalone binary can write it to the user's config directory on first run.
 //
 //go:embed config.yaml
 var defaultConfig []byte
@@ -196,7 +195,7 @@ func recoverConfig(configPath string) (config.Config, bool) {
 			return config.Config{}, false
 		}
 	}
-	cfg, err := config.Load(configPath, "")
+	cfg, err := loadProfile(configPath, "")
 	if err != nil {
 		slog.Error("the rebuilt config does not load — restore the backup and report this", "file", configPath, "error", err)
 		return config.Config{}, false
