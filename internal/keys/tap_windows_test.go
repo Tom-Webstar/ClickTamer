@@ -80,8 +80,11 @@ func TestScanCodeEncoding(t *testing.T) {
 		{"right arrow up", 0x27, 0xE04D, keyEventKeyUp, 0, 0x4D, keyEventScanCode | keyEventExtendedKey | keyEventKeyUp},
 		{"numpad 4", 0x64, 0x4B, 0, 0, 0x4B, keyEventScanCode},
 		{"numpad 9", 0x69, 0x49, 0, 0, 0x49, keyEventScanCode},
-		{"left arrow without a mapping", 0x25, 0, 0, 0, 0x4B, keyEventScanCode | keyEventExtendedKey},
-		{"page up without a mapping", 0x21, 0, 0, 0, 0x49, keyEventScanCode | keyEventExtendedKey},
+		{"left arrow without E0 prefix", 0x25, 0x4B, 0, 0, 0x4B, keyEventScanCode | keyEventExtendedKey},
+		{"page up without E0 prefix", 0x21, 0x49, 0, 0, 0x49, keyEventScanCode | keyEventExtendedKey},
+		{"left arrow without a mapping", 0x25, 0, 0, 0x25, 0, keyEventExtendedKey},
+		{"page up without a mapping", 0x21, 0, 0, 0x21, 0, keyEventExtendedKey},
+		{"other E0 mapping", 0x6F, 0xE035, 0, 0, 0x35, keyEventScanCode | keyEventExtendedKey},
 		{"unknown mapping fallback", 0x57, 0, 0, 0x57, 0, 0},
 		{"E1 prefix fallback", 0x13, 0xE145, 0, 0x13, 0, 0},
 	}
@@ -97,6 +100,9 @@ func TestScanCodeEncoding(t *testing.T) {
 }
 
 func TestDedicatedNavigationKeys(t *testing.T) {
+	if got := len(extended_namedkeys); got != 10 {
+		t.Fatalf("extended_namedkeys has %d entries, want 10", got)
+	}
 	for _, key := range []struct {
 		name string
 		vk   uint16
@@ -114,6 +120,9 @@ func TestDedicatedNavigationKeys(t *testing.T) {
 		{"pagedown", 0x22, 0x51},
 	} {
 		t.Run(key.name, func(t *testing.T) {
+			if !extended_namedkeys[key.vk] {
+				t.Fatalf("VK %#x is not listed in extended_namedkeys", key.vk)
+			}
 			b, err := Resolve(key.name)
 			if err != nil || b.VK != key.vk {
 				t.Fatalf("Resolve(%q) = %#x, %v; want VK %#x", key.name, b.VK, err, key.vk)

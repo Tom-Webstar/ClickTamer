@@ -84,6 +84,21 @@ var namedKeys = map[string]uint16{
 	"\\":        0xDC, // VK_OEM_5
 }
 
+// extended_namedkeys lists the dedicated navigation keys that need the E0
+// extended-key flag, even when MapVirtualKeyW omits the E0 scan-code prefix.
+var extended_namedkeys = map[uint16]bool{
+	vkLeft:     true,
+	vkUp:       true,
+	vkRight:    true,
+	vkDown:     true,
+	vkInsert:   true,
+	vkDelete:   true,
+	vkHome:     true,
+	vkEnd:      true,
+	vkPageUp:   true,
+	vkPageDown: true,
+}
+
 const firstFunctionKeyVK = 0x70 // VK_F1
 
 // Resolve turns a config token into a key binding.
