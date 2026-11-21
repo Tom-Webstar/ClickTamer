@@ -57,6 +57,9 @@ keyboard input on Windows. Runs on Windows only; developed cross-platform.
 
 - Lint, Test, Build (local): `just sanity`
 - CI (check-only): `just ci`
+- Build Windows AMD64 with `just build [VERSION]` and Linux AMD64 with
+  `just build-linux [VERSION]`. Without a version argument, these recipes use
+  `git describe` with a version tag or fall back to `0.0.0-dev`.
 - Deps: `just update-deps` (blanket `go get -u ./...`; BLE libs included —
   hardware re-verify before a release with BLE bumps)
 - List tasks: `just --list`
@@ -136,10 +139,12 @@ the TUI key-state model, pod states, the log buffer and the config-path tests.
   `bucket/clicktamer.json` and commits it straight back to `main`, so the repo
   itself works as a personal scoop bucket
   (`scoop bucket add clicktamer https://github.com/Tom-Webstar/clicktamer`).
-  Release assets are
-  `clicktamer.exe` / `clicktamer.zip` / `checksums.txt`; emulate the build +
-  manifest locally with `just scoop-release <version>` (needs `zip` +
-  `sha256sum`).
+  Windows release assets use the exact release version in
+  `clicktamer-win-amd64-VERSION.exe` and `.zip`, with `checksums.txt` for hashes.
+  Scoop installs the executable as `clicktamer.exe`. Emulate the build and
+  manifest locally with `just scoop-release <version>` (needs `zip` and
+  `sha256sum`). The Linux workflow packages `clicktamer-linux-amd64-VERSION`
+  in a matching `.tar.gz` archive.
 
 ## Hard-won facts (do not regress)
 

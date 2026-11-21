@@ -45,7 +45,7 @@ import (
 
 //go:generate just gen-icon
 
-// version is stamped at release time via -ldflags "-X main.version=...".
+// version is stamped by the build recipes via -ldflags "-X main.version=...".
 var version = "dev"
 
 // Defaults after CLI flags were removed; kept for internal use. The reconnect

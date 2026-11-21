@@ -5,8 +5,12 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 )
+
+const scoopReleaseURL = "https://github.com/Tom-Webstar/clicktamer/releases/download/"
 
 func requireJust(t *testing.T) {
 	t.Helper()
@@ -73,18 +77,58 @@ func TestScoopManifestRenders(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing 64bit architecture")
 	}
-	wantURL := "https://github.com/Tom-Webstar/clicktamer/releases/download/1.2.3/clicktamer.exe"
+	wantURL := scoopReleaseURL + "1.2.3/clicktamer-win-amd64-1.2.3.exe#/clicktamer.exe"
 	if arch.URL != wantURL {
 		t.Errorf("download url = %q, want %q", arch.URL, wantURL)
 	}
 	if arch.Hash != hash {
 		t.Errorf("hash = %q, want %q", arch.Hash, hash)
 	}
-	if got := m.Autoupdate.Architecture["64bit"].URL; got != "https://github.com/Tom-Webstar/clicktamer/releases/download/$version/clicktamer.exe" {
+	wantAutoupdate := scoopReleaseURL + "$version/clicktamer-win-amd64-$version.exe#/clicktamer.exe"
+	if got := m.Autoupdate.Architecture["64bit"].URL; got != wantAutoupdate {
 		t.Errorf("autoupdate url = %q", got)
 	}
 	if got := m.Autoupdate.Hash.URL; got != "$baseurl/checksums.txt" {
 		t.Errorf("autoupdate hash url = %q", got)
+	}
+}
+
+func TestScoopChecksum(t *testing.T) {
+	requireJust(t)
+	const version = "1.2.3"
+	const exe = "clicktamer-win-amd64-" + version + ".exe"
+	want := strings.Repeat("a", 64)
+	other := strings.Repeat("b", 64)
+	windowsLine := want + "  " + exe + "\n"
+	otherLines := other + "  clicktamer.exe\n" +
+		other + "  clicktamer-win-amd64-" + version + ".zip\n" +
+		other + "  clicktamer-win-amd64-1.2.4.exe\n"
+	for _, tc := range []struct {
+		name   string
+		lines  string
+		wantOK bool
+	}{
+		{"exact executable", otherLines + windowsLine, true},
+		{"missing executable", otherLines, false},
+		{"duplicate executable", windowsLine + windowsLine, false},
+		{"invalid hash", "invalid  " + exe + "\n", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "checksums.txt")
+			if err := os.WriteFile(path, []byte(tc.lines), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			out, err := exec.Command("just", "scoop-checksum", version, path).CombinedOutput()
+			if !tc.wantOK {
+				if err == nil {
+					t.Fatalf("expected lookup failure, got %q", out)
+				}
+				return
+			}
+			if err != nil || strings.TrimSpace(string(out)) != want {
+				t.Fatalf("lookup: got %q, %v, want %q", out, err, want)
+			}
+		})
 	}
 }
 
@@ -122,6 +166,7 @@ func TestBucketManifestInSync(t *testing.T) {
 	var m struct {
 		Version      string `json:"version"`
 		Architecture map[string]struct {
+			URL  string `json:"url"`
 			Hash string `json:"hash"`
 		} `json:"architecture"`
 	}
@@ -132,6 +177,14 @@ func TestBucketManifestInSync(t *testing.T) {
 	out, err := exec.Command("just", "scoop-manifest", m.Version, hash).Output()
 	if err != nil {
 		t.Fatalf("script failed: %v", err)
+	}
+	// Releases published before the filename change keep their original assets.
+	if m.Architecture["64bit"].URL == scoopReleaseURL+m.Version+"/clicktamer.exe" {
+		for _, version := range []string{m.Version, "$version"} {
+			versioned := scoopReleaseURL + version + "/clicktamer-win-amd64-" + version + ".exe#/clicktamer.exe"
+			legacy := scoopReleaseURL + version + "/clicktamer.exe"
+			out = bytes.ReplaceAll(out, []byte(versioned), []byte(legacy))
+		}
 	}
 	if !bytes.Equal(bytes.TrimSpace(out), bytes.TrimSpace(raw)) {
 		t.Errorf("bucket/clicktamer.json is stale; run: just scoop-manifest %s %s > bucket/clicktamer.json", m.Version, hash)

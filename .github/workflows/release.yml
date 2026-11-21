@@ -99,10 +99,10 @@ jobs:
         id: hash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
         run: |
-          gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
-          sha=$(awk '$2 == "clicktamer.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
-          [ -n "$sha" ] || { echo "no clicktamer.exe hash in checksums.txt"; exit 1; }
+          gh release download "$RELEASE_TAG" --pattern checksums.txt --dir "$RUNNER_TEMP"
+          sha=$(just scoop-checksum "$RELEASE_TAG" "$RUNNER_TEMP/checksums.txt")
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - name: Render bucket manifest
         run: |
@@ -152,10 +152,10 @@ jobs:
   #       id: hash
   #       env:
   #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         RELEASE_TAG: ${{ needs.release.outputs.tag }}
   #       run: |
-  #         gh release download "${{ needs.release.outputs.tag }}" --pattern checksums.txt --dir "$RUNNER_TEMP"
-  #         sha=$(awk '$2 == "clicktamer.exe" { print $1 }' "$RUNNER_TEMP/checksums.txt")
-  #         [ -n "$sha" ] || { echo "no clicktamer.exe hash in checksums.txt"; exit 1; }
+  #         gh release download "$RELEASE_TAG" --pattern checksums.txt --dir "$RUNNER_TEMP"
+  #         sha=$(just scoop-checksum "$RELEASE_TAG" "$RUNNER_TEMP/checksums.txt")
   #         echo "sha=$sha" >> "$GITHUB_OUTPUT"
   #     - name: Render manifest
   #       run: |
@@ -177,7 +177,7 @@ jobs:
   #         body: |
   #           Adds the clicktamer ${{ needs.release.outputs.tag }} manifest.
 
-  #           - Asset: `clicktamer.exe`
+  #           - Asset: `clicktamer-win-amd64-${{ needs.release.outputs.tag }}.exe`
   #           - sha256: `${{ steps.hash.outputs.sha }}`
   #           - Homepage: https://github.com/Tom-Webstar/clicktamer
 

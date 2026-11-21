@@ -13,16 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
       - uses: extractions/setup-just@v4
-      - name: Linux tests, vet and build
-        run: just ci-linux
-      - name: Package executable with its permissions
-        run: tar -czf dist/clicktamer-linux-amd64.tar.gz -C dist clicktamer-linux-amd64
+      - name: Linux tests, vet, build and package
+        id: build
+        run: |
+          version=$(just build-version)
+          just ci-linux "$version"
+          name="clicktamer-linux-amd64-$version"
+          tar -czf "dist/$name.tar.gz" -C dist "$name"
+          echo "artifact=$name" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: clicktamer-linux-amd64
-          path: dist/clicktamer-linux-amd64.tar.gz
+          name: ${{ steps.build.outputs.artifact }}
+          path: dist/${{ steps.build.outputs.artifact }}.tar.gz
           if-no-files-found: error

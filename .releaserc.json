@@ -17,8 +17,8 @@
       "@semantic-release/github",
       {
         "assets": [
-          { "path": "dist/clicktamer.exe", "label": "clicktamer.exe" },
-          { "path": "dist/clicktamer.zip", "label": "clicktamer.zip (exe)" },
+          "dist/clicktamer-win-amd64-*.exe",
+          "dist/clicktamer-win-amd64-*.zip",
           { "path": "dist/checksums.txt", "label": "checksums.txt (sha256)" }
         ]
       }

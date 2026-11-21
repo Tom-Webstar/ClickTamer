@@ -1,5 +1,9 @@
 # clicktamer tasks. Run `just` to list.
 
+build_version := `git describe --tags --match '[0-9]*.[0-9]*.[0-9]*' --dirty 2>/dev/null || printf '%s\n' 0.0.0-dev`
+windows_prefix := "clicktamer-win-amd64-"
+linux_prefix := "clicktamer-linux-amd64-"
+
 default:
     @just --list
 
@@ -29,26 +33,33 @@ fmt-check:
 
 # --- build ----------------------------------------------------------------
 
+# Resolve the default once when CI needs to name both a binary and its archive.
+build-version:
+    @printf '%s\n' {{quote(build_version)}}
+
+_check-version version:
+    @case {{quote(version)}} in ''|[!0-9]*|*[!0-9A-Za-z.+-]*) printf '%s\n' 'Invalid build version' >&2; exit 1 ;; esac
+
 # Build the Windows exe icon resource (generated, never committed).
 gen-icon:
     go run github.com/tc-hib/go-winres@v0.3.3 simply \
         --manifest none --arch amd64 --out rsrc \
         --icon res/icon/clicktamer-256.png
 
-build: gen-icon
+build version=build_version: (_check-version version) gen-icon
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
-        -ldflags="-s -w" \
-        -o dist/clicktamer.exe .
+        -ldflags={{quote("-s -w -X main.version=" + version)}} \
+        -o {{quote("dist/" + windows_prefix + version + ".exe")}} .
 
 # Linux AMD64 is built separately from the Windows release.
-build-linux:
+build-linux version=build_version: (_check-version version)
     mkdir -p dist
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
-        -ldflags="-s -w" \
-        -o dist/clicktamer-linux-amd64 .
+        -ldflags={{quote("-s -w -X main.version=" + version)}} \
+        -o {{quote("dist/" + linux_prefix + version)}} .
 
 # Check and build the Linux branch without touching Windows release assets.
-ci-linux: fmt-check vet test test-uinput build-linux
+ci-linux version=build_version: fmt-check vet test test-uinput (build-linux version)
 
 # Local: formats, then checks + builds.
 sanity: fmt test vet build
@@ -58,28 +69,39 @@ ci: fmt-check vet test build
 
 # --- release (needs zip + sha256sum: Ubuntu CI + local) -------------------
 
-release version:
+release version: (_check-version version)
     #!/usr/bin/env bash
     set -euo pipefail
+    name={{quote(windows_prefix + version)}}
     rm -rf dist && mkdir dist
-    just gen-icon
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
-        -ldflags="-s -w -X main.version={{version}}" \
-        -o dist/clicktamer.exe .
-    (cd dist && zip -q clicktamer.zip clicktamer.exe)
-    (cd dist && sha256sum clicktamer.exe clicktamer.zip > checksums.txt)
+    just build {{quote(version)}}
+    (cd dist && zip -q "$name.zip" "$name.exe")
+    (cd dist && sha256sum "$name.exe" "$name.zip" > checksums.txt)
 
 # --- scoop (local + CI) ---------------------------------------------------
 
-# Render the ScoopInstaller/Extras manifest for VERSION + exe SHA256 to stdout.
-scoop-manifest version hash:
+# Read the unique Windows executable checksum for this release.
+scoop-checksum $version $checksum_file:
     #!/usr/bin/env bash
-    # Same recipe runs locally and in the release-workflow scoop job. VERSION is
-    # the bare semantic-release tag (no "v"); SHA256 is the released
-    # clicktamer.exe hash from that release's checksums.txt asset.
     set -euo pipefail
-    version='{{version}}'
-    hash='{{hash}}'
+    exe="{{windows_prefix}}${version}.exe"
+    if ! awk -v exe="$exe" '
+        $2 == exe { hash = $1; matches++ }
+        END {
+            if (matches != 1 || length(hash) != 64 || hash !~ /^[A-Fa-f0-9]+$/) exit 1
+            print hash
+        }
+    ' "$checksum_file"; then
+        printf 'expected one SHA256 for %s in %s\n' "$exe" "$checksum_file" >&2
+        exit 1
+    fi
+
+# Render the ScoopInstaller/Extras manifest for VERSION + exe SHA256 to stdout.
+scoop-manifest $version $hash:
+    #!/usr/bin/env bash
+    # Scoop saves the versioned download as clicktamer.exe via the URL fragment.
+    set -euo pipefail
+    exe="{{windows_prefix}}${version}.exe"
     cat <<EOF
     {
         "version": "$version",
@@ -88,7 +110,7 @@ scoop-manifest version hash:
         "license": "MIT",
         "architecture": {
             "64bit": {
-                "url": "https://github.com/Tom-Webstar/clicktamer/releases/download/$version/clicktamer.exe",
+                "url": "https://github.com/Tom-Webstar/clicktamer/releases/download/$version/$exe#/clicktamer.exe",
                 "hash": "$hash"
             }
         },
@@ -98,7 +120,7 @@ scoop-manifest version hash:
         "autoupdate": {
             "architecture": {
                 "64bit": {
-                    "url": "https://github.com/Tom-Webstar/clicktamer/releases/download/\$version/clicktamer.exe"
+                    "url": "https://github.com/Tom-Webstar/clicktamer/releases/download/\$version/{{windows_prefix}}\$version.exe#/clicktamer.exe"
                 }
             },
             "hash": {
@@ -109,14 +131,13 @@ scoop-manifest version hash:
     EOF
 
 # Local end-to-end: build the release assets and render dist/clicktamer.json.
-scoop-release version: (release version)
+scoop-release $version: (release version)
     #!/usr/bin/env bash
     # Exercises the whole scoop pipeline before a live main push. POSIX-only
     # (zip/sha256sum), like `release`.
     set -euo pipefail
-    sha=$(awk '$2 == "clicktamer.exe" { print $1 }' dist/checksums.txt)
-    [ -n "$sha" ] || { echo "no clicktamer.exe hash in dist/checksums.txt"; exit 1; }
-    just scoop-manifest {{version}} "$sha" > dist/clicktamer.json
+    sha=$(just scoop-checksum "$version" dist/checksums.txt)
+    just scoop-manifest "$version" "$sha" > dist/clicktamer.json
     echo "wrote dist/clicktamer.json"
 
 # --- deps -----------------------------------------------------------------

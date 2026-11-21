@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-11-21 — Versioned build filenames
+
+Windows builds produce `clicktamer-win-amd64-<version>.exe` and release ZIPs
+use the same base name. Linux builds and CI tarballs use
+`clicktamer-linux-amd64-<version>`. The build recipes stamp the filename's
+version into the binary. Releases use semantic-release's version. Local
+builds use Git's version unless a version is supplied explicitly.
+
+Verified both AMD64 builds, the Windows executable's `-version`, Windows
+ZIP members and checksums, the Linux tarball, and the Scoop manifest.
+Scoop saves the versioned download as `clicktamer.exe`. The pinned older
+manifest retains its published download. Go tests, vet, and workflow lint
+passed. Verify the uploads on the next hosted release and Linux build.
+
 ## 2026-11-21 — dev-linux review
 
 Reviewed `dev-linux` at `0a20ab2` against `dev` at `a6ec371`.
