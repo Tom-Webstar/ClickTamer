@@ -142,6 +142,7 @@ func Down(b Binding) bool {
 	}
 	if err := linuxKeyboard.KeyDown(code); err != nil {
 		slog.Warn("Linux keyboard key down failed", "vk", b.VK, "error", err)
+		discardLinuxKeyboard()
 		return false
 	}
 	return true
@@ -160,9 +161,20 @@ func Up(b Binding) bool {
 	}
 	if err := linuxKeyboard.KeyUp(code); err != nil {
 		slog.Warn("Linux keyboard key up failed", "vk", b.VK, "error", err)
+		discardLinuxKeyboard()
 		return false
 	}
 	return true
+}
+
+// A failed write can leave key state uncertain. Closing the device releases
+// its held keys, and the next press opens a fresh keyboard. Caller holds the mutex.
+func discardLinuxKeyboard() {
+	err := linuxKeyboard.Close()
+	linuxKeyboard = nil
+	if err != nil {
+		slog.Warn("Linux keyboard close failed", "error", err)
+	}
 }
 
 // ReleaseVK frees a held key when a BLE session ends.

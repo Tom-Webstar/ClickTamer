@@ -4,8 +4,45 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 )
+
+func TestKeyboardAdvertisesKeyRepeat(t *testing.T) {
+	const path = "/dev/uinput"
+	probe, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		t.Skipf("uinput unavailable: %v", err)
+	}
+	if err := probe.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	kb, err := CreateKeyboard(path, []byte("Test Repeat Keyboard"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer kb.Close()
+
+	sysPath, err := kb.FetchSyspath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev, err := ioutil.ReadFile(filepath.Join(strings.TrimRight(sysPath, "\x00"), "capabilities", "ev"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	capabilities, err := strconv.ParseUint(strings.TrimSpace(string(ev)), 16, 32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const evRepMask = 1 << 0x14
+	if capabilities&evRepMask == 0 {
+		t.Fatalf("keyboard event capabilities %#x omit EV_REP", capabilities)
+	}
+}
 
 // This test will confirm that basic key events are working.
 // Note that only Key1 is used here, as the purpose of this test is to ensure that the event handling for

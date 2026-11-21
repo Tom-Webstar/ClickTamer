@@ -154,12 +154,13 @@ func createUsbDevice(deviceFile *os.File, dev uinputUserDev) (fd *os.File, err e
 	return deviceFile, err
 }
 
-func closeDevice(deviceFile *os.File) (err error) {
-	err = releaseDevice(deviceFile)
-	if err != nil {
-		return fmt.Errorf("failed to close device: %v", err)
+func closeDevice(deviceFile *os.File) error {
+	destroyErr := releaseDevice(deviceFile)
+	closeErr := deviceFile.Close()
+	if destroyErr != nil {
+		return fmt.Errorf("failed to close device: %w", destroyErr)
 	}
-	return deviceFile.Close()
+	return closeErr
 }
 
 func releaseDevice(deviceFile *os.File) (err error) {

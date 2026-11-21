@@ -103,6 +103,11 @@ func createVKeyboardDevice(path string, name []byte) (fd *os.File, err error) {
 		deviceFile.Close()
 		return nil, fmt.Errorf("failed to register virtual keyboard device: %v", err)
 	}
+	// The input core repeats held keys only for devices advertising EV_REP.
+	if err := ioctl(deviceFile, uiSetEvBit, evRep); err != nil {
+		deviceFile.Close()
+		return nil, fmt.Errorf("failed to enable keyboard repeat: %w", err)
+	}
 
 	// register key events
 	for i := 0; i <= keyMax; i++ {

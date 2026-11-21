@@ -1,10 +1,27 @@
 package uinput
 
 import (
+	"errors"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 )
+
+func TestCloseDeviceClosesFileAfterDestroyFailure(t *testing.T) {
+	file, err := ioutil.TempFile("", "not-uinput")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+	if err := closeDevice(file); err == nil {
+		t.Fatal("expected the destroy ioctl to fail on a regular file")
+	}
+	if _, err := file.Write([]byte{0}); !errors.Is(err, os.ErrClosed) {
+		t.Fatalf("file remained open after a failed destroy ioctl: %v", err)
+	}
+}
 
 func TestValidateDevicePathEmptyPathPanics(t *testing.T) {
 	expected := "device path must not be empty"

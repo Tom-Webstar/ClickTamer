@@ -49,7 +49,10 @@ func TestLinuxKeyCodes(t *testing.T) {
 
 // An injected device exercises the Linux path in CI without /dev/uinput access.
 type fakeLinuxKeyboard struct {
-	events []string
+	events  []string
+	downErr error
+	upErr   error
+	closed  bool
 }
 
 func (f *fakeLinuxKeyboard) KeyPress(code int) error {
@@ -58,31 +61,36 @@ func (f *fakeLinuxKeyboard) KeyPress(code int) error {
 }
 func (f *fakeLinuxKeyboard) KeyDown(code int) error {
 	f.events = append(f.events, fmt.Sprint("down:", code))
-	return nil
+	return f.downErr
 }
 func (f *fakeLinuxKeyboard) KeyUp(code int) error {
 	f.events = append(f.events, fmt.Sprint("up:", code))
-	return nil
+	return f.upErr
 }
 func (f *fakeLinuxKeyboard) FetchSyspath() (string, error) {
 	return "", nil
 }
 func (f *fakeLinuxKeyboard) Close() error {
+	f.closed = true
 	return nil
 }
 
-func TestLinuxKeyboardPressAndRelease(t *testing.T) {
-	fake := &fakeLinuxKeyboard{}
+func useLinuxKeyboard(t *testing.T, device uinput.Keyboard, factory func() (uinput.Keyboard, error)) {
+	t.Helper()
 	linuxKeyboardMu.Lock()
 	oldDevice, oldFactory := linuxKeyboard, linuxKeyboardFactory
-	linuxKeyboard = nil
-	linuxKeyboardFactory = func() (uinput.Keyboard, error) { return fake, nil }
+	linuxKeyboard, linuxKeyboardFactory = device, factory
 	linuxKeyboardMu.Unlock()
 	t.Cleanup(func() {
 		linuxKeyboardMu.Lock()
 		linuxKeyboard, linuxKeyboardFactory = oldDevice, oldFactory
 		linuxKeyboardMu.Unlock()
 	})
+}
+
+func TestLinuxKeyboardPressAndRelease(t *testing.T) {
+	fake := &fakeLinuxKeyboard{}
+	useLinuxKeyboard(t, nil, func() (uinput.Keyboard, error) { return fake, nil })
 
 	b, err := Resolve("left")
 	if err != nil {
@@ -106,23 +114,14 @@ func TestLinuxKeyboardPressAndRelease(t *testing.T) {
 }
 
 func TestLinuxKeyboardInitFailureCanRetry(t *testing.T) {
-	linuxKeyboardMu.Lock()
-	oldDevice, oldFactory := linuxKeyboard, linuxKeyboardFactory
-	linuxKeyboard = nil
 	calls := 0
 	fake := &fakeLinuxKeyboard{}
-	linuxKeyboardFactory = func() (uinput.Keyboard, error) {
+	useLinuxKeyboard(t, nil, func() (uinput.Keyboard, error) {
 		calls++
 		if calls == 1 {
 			return nil, fmt.Errorf("permission denied")
 		}
 		return fake, nil
-	}
-	linuxKeyboardMu.Unlock()
-	t.Cleanup(func() {
-		linuxKeyboardMu.Lock()
-		linuxKeyboard, linuxKeyboardFactory = oldDevice, oldFactory
-		linuxKeyboardMu.Unlock()
 	})
 
 	b, err := Resolve("a")
@@ -134,5 +133,41 @@ func TestLinuxKeyboardInitFailureCanRetry(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("keyboard initializations: %d, want 2", calls)
+	}
+}
+
+func TestLinuxKeyboardWriteFailureCanRecover(t *testing.T) {
+	for _, edge := range []string{"down", "up"} {
+		t.Run(edge, func(t *testing.T) {
+			broken := &fakeLinuxKeyboard{}
+			replacement := &fakeLinuxKeyboard{}
+			useLinuxKeyboard(t, broken, func() (uinput.Keyboard, error) { return replacement, nil })
+
+			b, err := Resolve("a")
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeErr := fmt.Errorf("device write failed")
+			if edge == "down" {
+				broken.downErr = writeErr
+				if Down(b) {
+					t.Fatal("key down reported success after a failed write")
+				}
+			} else {
+				if !Down(b) {
+					t.Fatal("could not hold a key before the failed release")
+				}
+				broken.upErr = writeErr
+				if Up(b) {
+					t.Fatal("key up reported success after a failed write")
+				}
+			}
+			if !broken.closed {
+				t.Fatal("failed keyboard was left open with potentially held keys")
+			}
+			if !Down(b) || len(replacement.events) != 1 {
+				t.Fatal("next key down did not use a replacement keyboard")
+			}
+		})
 	}
 }

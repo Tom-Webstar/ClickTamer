@@ -8,6 +8,11 @@ default:
 test:
     go test -race ./...
 
+# The upstream integration suite requires a writable /dev/uinput.
+test-uinput:
+    go -C internal/uinput vet ./...
+    go -C internal/uinput test -race -run '^(TestCloseDeviceClosesFileAfterDestroyFailure|TestKeyboardAdvertisesKeyRepeat)$' ./...
+
 vet:
     go vet ./...
     GOOS=windows go vet ./...
@@ -43,7 +48,7 @@ build-linux:
         -o dist/clicktamer-linux-amd64 .
 
 # Check and build the Linux branch without touching Windows release assets.
-ci-linux: fmt-check vet test build-linux
+ci-linux: fmt-check vet test test-uinput build-linux
 
 # Local: formats, then checks + builds.
 sanity: fmt test vet build
