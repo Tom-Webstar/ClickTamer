@@ -1,10 +1,9 @@
-//go:build !windows && !linux
+//go:build !windows && !linux && (!darwin || ios || !cgo)
 
 package keys
 
-// Tap/Down/Up/ReleaseVK are no-ops off Windows; BLE support here is
-// Windows-only anyway. Down/Up report true so the hold tracker sees the key
-// "sent" (there is no window to drop into on the dev platform).
+// Tap/Down/Up/ReleaseVK are no-ops on builds without an input backend.
+// Down and Up report success so the hold tracker observes both edges.
 func Tap(b Binding) {}
 
 func Down(b Binding) bool { return true }

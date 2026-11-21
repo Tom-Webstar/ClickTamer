@@ -17,12 +17,16 @@ import (
 
 func loadProfile(path, name string) (config.Config, error) {
 	cfg, err := config.Load(path, name)
-	if runtime.GOOS == "linux" {
+	return profileForPlatform(cfg, runtime.GOOS), err
+}
+
+func profileForPlatform(cfg config.Config, platform string) config.Config {
+	if platform == "linux" || platform == "darwin" {
 		// Keep Windows focus/launch settings in the file for shared profiles.
 		cfg.FocusProgramNamePrefixOnClick = ""
 		cfg.StartProgram = ""
 	}
-	return cfg, err
+	return cfg
 }
 
 // profileState is the live state shared between the TUI's switch callback and

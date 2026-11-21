@@ -86,7 +86,10 @@ var extended_namedkeys = map[uint16]bool{
 	0x22: true, // VK_NEXT (Page Down)
 }
 
-const firstFunctionKeyVK = 0x70 // VK_F1
+const (
+	firstFunctionKeyVK = 0x70 // VK_F1
+	functionKeyCount   = 12
+)
 
 // Resolve turns a config token into a key binding.
 func Resolve(token string) (Binding, error) {
@@ -98,7 +101,7 @@ func Resolve(token string) (Binding, error) {
 		return Binding{VK: vk, Token: tok}, nil
 	}
 	if len(tok) >= 2 && len(tok) <= 3 && tok[0] == 'f' {
-		if n, err := strconv.Atoi(tok[1:]); err == nil && n >= 1 && n <= 12 {
+		if n, err := strconv.Atoi(tok[1:]); err == nil && n >= 1 && n <= functionKeyCount {
 			return Binding{VK: firstFunctionKeyVK + uint16(n-1), Token: tok}, nil
 		}
 	}

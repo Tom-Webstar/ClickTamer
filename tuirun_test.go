@@ -245,7 +245,7 @@ func TestReloadUsesSupportedDesktopActions(t *testing.T) {
 	s.reload()
 
 	wantFocus, wantProgram := "Notepad", "notepad.exe"
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
 		wantFocus, wantProgram = "", ""
 	}
 	cfg := s.current()
@@ -255,6 +255,30 @@ func TestReloadUsesSupportedDesktopActions(t *testing.T) {
 	}
 	if b, ok := s.km.Get("A"); !ok || b.Token != "space" {
 		t.Fatalf("reloaded binding = %v, present = %v", b, ok)
+	}
+}
+
+func TestProfileDesktopActionsForPlatform(t *testing.T) {
+	cfg := config.Config{
+		FocusProgramNamePrefixOnClick: "Notepad",
+		StartProgram:                  "notepad.exe",
+	}
+	for _, tc := range []struct {
+		platform string
+		focus    string
+		program  string
+	}{
+		{"windows", "Notepad", "notepad.exe"},
+		{"linux", "", ""},
+		{"darwin", "", ""},
+	} {
+		t.Run(tc.platform, func(t *testing.T) {
+			got := profileForPlatform(cfg, tc.platform)
+			if got.FocusProgramNamePrefixOnClick != tc.focus || got.StartProgram != tc.program {
+				t.Fatalf("focus = %q, start program = %q, want %q and %q",
+					got.FocusProgramNamePrefixOnClick, got.StartProgram, tc.focus, tc.program)
+			}
+		})
 	}
 }
 

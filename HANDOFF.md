@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-11-21 — Quartz keyboard wiring
+
+The macOS cgo build routes key-down, key-up, and forced releases through
+`internal/Quartz`. The BLE hold tracker keeps its shared VK identity.
+The backend converts that code to the same Quartz key for each edge, so a
+disconnect or profile switch can release a key even without its token.
+macOS profiles send input to the focused app and keep Windows launch and
+focus settings inactive at runtime.
+
+The Quartz dispatch tests exercise every configured key via a fake event
+poster. Go selects the native backend for both Darwin architectures.
+Next, add the native Darwin builds and verify key delivery and release on
+macOS with Accessibility permission. A full Darwin test run also needs the
+BLE scan fixture to use CoreBluetooth's UUID address type.
+
 ## 2026-11-21 — Versioned build filenames
 
 Windows builds produce `clicktamer-win-amd64-<version>.exe` and release ZIPs
