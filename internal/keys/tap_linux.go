@@ -15,8 +15,8 @@ import (
 const linuxUinputPath = "/dev/uinput"
 
 var (
-	linuxKeyboardMu sync.Mutex
-	linuxKeyboard   uinput.Keyboard
+	linuxKeyboardMu      sync.Mutex
+	linuxKeyboard        uinput.Keyboard
 	linuxKeyboardFactory = func() (uinput.Keyboard, error) {
 		return uinput.CreateKeyboard(linuxUinputPath, []byte("ClickTamer Virtual Keyboard"))
 	}
@@ -47,38 +47,70 @@ func linuxKeyCode(vk uint16) (int, bool) {
 		return uinput.KeyF1 + int(vk-0x70), true
 	}
 	switch vk {
-	case 0x7A: return uinput.KeyF11, true
-	case 0x7B: return uinput.KeyF12, true
-	case 0x25: return uinput.KeyLeft, true
-	case 0x26: return uinput.KeyUp, true
-	case 0x27: return uinput.KeyRight, true
-	case 0x28: return uinput.KeyDown, true
-	case 0x2D: return uinput.KeyInsert, true
-	case 0x2E: return uinput.KeyDelete, true
-	case 0x24: return uinput.KeyHome, true
-	case 0x23: return uinput.KeyEnd, true
-	case 0x21: return uinput.KeyPageup, true
-	case 0x22: return uinput.KeyPagedown, true
-	case 0x0D: return uinput.KeyEnter, true
-	case 0x20: return uinput.KeySpace, true
-	case 0x09: return uinput.KeyTab, true
-	case 0x1B: return uinput.KeyEsc, true
-	case 0x08: return uinput.KeyBackspace, true
-	case 0x10: return uinput.KeyLeftshift, true
-	case 0x11: return uinput.KeyLeftctrl, true
-	case 0x12: return uinput.KeyLeftalt, true
-	case 0x14: return uinput.KeyCapslock, true
-	case 0xBD: return uinput.KeyMinus, true
-	case 0xBB: return uinput.KeyEqual, true
-	case 0xBC: return uinput.KeyComma, true
-	case 0xBE: return uinput.KeyDot, true
-	case 0xBF: return uinput.KeySlash, true
-	case 0xBA: return uinput.KeySemicolon, true
-	case 0xDE: return uinput.KeyApostrophe, true
-	case 0xDB: return uinput.KeyLeftbrace, true
-	case 0xDD: return uinput.KeyRightbrace, true
-	case 0xC0: return uinput.KeyGrave, true
-	case 0xDC: return uinput.KeyBackslash, true
+	case 0x7A:
+		return uinput.KeyF11, true
+	case 0x7B:
+		return uinput.KeyF12, true
+	case 0x25:
+		return uinput.KeyLeft, true
+	case 0x26:
+		return uinput.KeyUp, true
+	case 0x27:
+		return uinput.KeyRight, true
+	case 0x28:
+		return uinput.KeyDown, true
+	case 0x2D:
+		return uinput.KeyInsert, true
+	case 0x2E:
+		return uinput.KeyDelete, true
+	case 0x24:
+		return uinput.KeyHome, true
+	case 0x23:
+		return uinput.KeyEnd, true
+	case 0x21:
+		return uinput.KeyPageup, true
+	case 0x22:
+		return uinput.KeyPagedown, true
+	case 0x0D:
+		return uinput.KeyEnter, true
+	case 0x20:
+		return uinput.KeySpace, true
+	case 0x09:
+		return uinput.KeyTab, true
+	case 0x1B:
+		return uinput.KeyEsc, true
+	case 0x08:
+		return uinput.KeyBackspace, true
+	case 0x10:
+		return uinput.KeyLeftshift, true
+	case 0x11:
+		return uinput.KeyLeftctrl, true
+	case 0x12:
+		return uinput.KeyLeftalt, true
+	case 0x14:
+		return uinput.KeyCapslock, true
+	case 0xBD:
+		return uinput.KeyMinus, true
+	case 0xBB:
+		return uinput.KeyEqual, true
+	case 0xBC:
+		return uinput.KeyComma, true
+	case 0xBE:
+		return uinput.KeyDot, true
+	case 0xBF:
+		return uinput.KeySlash, true
+	case 0xBA:
+		return uinput.KeySemicolon, true
+	case 0xDE:
+		return uinput.KeyApostrophe, true
+	case 0xDB:
+		return uinput.KeyLeftbrace, true
+	case 0xDD:
+		return uinput.KeyRightbrace, true
+	case 0xC0:
+		return uinput.KeyGrave, true
+	case 0xDC:
+		return uinput.KeyBackslash, true
 	}
 	return 0, false
 }

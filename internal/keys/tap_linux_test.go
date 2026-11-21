@@ -51,11 +51,24 @@ func TestLinuxKeyCodes(t *testing.T) {
 type fakeLinuxKeyboard struct {
 	events []string
 }
-func (f *fakeLinuxKeyboard) KeyPress(code int) error { f.events = append(f.events, fmt.Sprint("press:", code)); return nil }
-func (f *fakeLinuxKeyboard) KeyDown(code int) error { f.events = append(f.events, fmt.Sprint("down:", code)); return nil }
-func (f *fakeLinuxKeyboard) KeyUp(code int) error { f.events = append(f.events, fmt.Sprint("up:", code)); return nil }
-func (f *fakeLinuxKeyboard) FetchSyspath() (string, error) { return "", nil }
-func (f *fakeLinuxKeyboard) Close() error { return nil }
+func (f *fakeLinuxKeyboard) KeyPress(code int) error {
+	f.events = append(f.events, fmt.Sprint("press:", code))
+	return nil
+}
+func (f *fakeLinuxKeyboard) KeyDown(code int) error {
+	f.events = append(f.events, fmt.Sprint("down:", code))
+	return nil
+}
+func (f *fakeLinuxKeyboard) KeyUp(code int) error {
+	f.events = append(f.events, fmt.Sprint("up:", code))
+	return nil
+}
+func (f *fakeLinuxKeyboard) FetchSyspath() (string, error) {
+	return "", nil
+}
+func (f *fakeLinuxKeyboard) Close() error {
+	return nil
+}
 
 func TestLinuxKeyboardPressAndRelease(t *testing.T) {
 	fake := &fakeLinuxKeyboard{}
@@ -71,7 +84,9 @@ func TestLinuxKeyboardPressAndRelease(t *testing.T) {
 	})
 
 	b, err := Resolve("left")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !Down(b) || !Up(b) {
 		t.Fatal("left key down/up failed")
 	}
@@ -97,7 +112,9 @@ func TestLinuxKeyboardInitFailureCanRetry(t *testing.T) {
 	fake := &fakeLinuxKeyboard{}
 	linuxKeyboardFactory = func() (uinput.Keyboard, error) {
 		calls++
-		if calls == 1 { return nil, fmt.Errorf("permission denied") }
+		if calls == 1 {
+			return nil, fmt.Errorf("permission denied")
+		}
 		return fake, nil
 	}
 	linuxKeyboardMu.Unlock()
@@ -108,9 +125,13 @@ func TestLinuxKeyboardInitFailureCanRetry(t *testing.T) {
 	})
 
 	b, err := Resolve("a")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if Down(b) || !Down(b) || !Up(b) {
 		t.Fatal("expected first keydown to fail and second to succeed")
 	}
-	if calls != 2 { t.Fatalf("keyboard initializations: %d, want 2", calls) }
+	if calls != 2 {
+		t.Fatalf("keyboard initializations: %d, want 2", calls)
+	}
 }
