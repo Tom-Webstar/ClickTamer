@@ -1,12 +1,13 @@
 <div align="center">
   <img src="res/icon/clicktamer-256.png" width="110" alt="clicktamer icon">
   <h1>clicktamer</h1>
-  <p><strong>Your Zwift Click V2 becomes a keyboard for any cycling app on Windows.</strong></p>
+  <p><strong>Your Zwift Click V2 becomes a keyboard for any cycling app on Windows or Linux.</strong></p>
   <p>
     <a href="https://github.com/Tom-Webstar/clicktamer/actions/workflows/ci.yml"><img src="https://github.com/Tom-Webstar/clicktamer/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
     <a href="https://github.com/Tom-Webstar/clicktamer/releases/latest"><img src="https://img.shields.io/github/v/release/Tom-Webstar/clicktamer?sort=semver" alt="Latest release"></a>
     <a href="https://scoop.sh"><img src="https://img.shields.io/badge/scoop-extras-4B8BBE" alt="Scoop (extras bucket)"></a>
     <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Platform: Windows">
+    <img src="https://img.shields.io/badge/platform-Linux%20AMD64-FCC624" alt="Platform: Linux AMD64">
     <a href="LICENSE"><img src="https://img.shields.io/github/license/Tom-Webstar/clicktamer" alt="License: MIT"></a>
   </p>
 </div>
@@ -18,10 +19,9 @@ Zwift locks the Click V2 to its own app. `clicktamer` frees it: connect over Blu
 - **One pod or two** - Works with both controllers or right only.
 - **No Unlock Tricks** - No need to start Zwift App to unlock controllers. Everything is done for you automatically.
 - **Free and open source** - no subscription, no paid tier. The right pod needs no account, the left only needs a non-paid zwift account.
-- **Starts your app for you** - each profile can launch the corresponding cycling app once Bluetooth is up, so one double-click on `clicktamer.exe` opens the whole setup. See [Start a program with a profile](#start-a-program-with-a-profile).
-- **Clicks land in the right window** - optionally bring your app to the front on every click button press, so a press never goes to the wrong window.
+- **Starts your app for you on Windows** - each profile can launch the corresponding cycling app once Bluetooth is up, so one double-click on `clicktamer.exe` opens the whole setup. See [Start a program with a profile](#start-a-program-with-a-profile).
+- **Optional window targeting on Windows** - bring your app to the front on every button press.
 - **Ready for your app** - profiles for Biketerra, MyWhoosh, Zwift, TrainerRoad, Rouvy, TrainingPeaks Virtual, Tacx Training and Wahoo SYSTM. Or map any program yourself.
-- **Windows, Zwift Click V2** - the pair this tool is built for.
 
 ---
 
@@ -35,7 +35,7 @@ Zwift locks the Click V2 to its own app. `clicktamer` frees it: connect over Blu
 
 ### From Releases
 
-Download the latest version from the [release page](https://github.com/Tom-Webstar/clicktamer/releases).
+Download the latest Windows build from the [release page](https://github.com/Tom-Webstar/clicktamer/releases).
 
 ### From Scoop
 
@@ -53,7 +53,31 @@ submitted to the community [extras](https://github.com/ScoopInstaller/Extras)
 bucket — once that PR is merged, `scoop install extras/clicktamer` works too.
 Manual downloads remain available on the [Releases](../../releases) page.
 
+### Linux AMD64
+
+Download `clicktamer-linux-amd64` from a successful `dev-linux` run in
+[GitHub Actions](../../actions/workflows/linux.yml?query=branch%3Adev-linux).
+Unzip the download. Run these commands to extract the tarball and start ClickTamer.
+
+```sh
+tar -xzf clicktamer-linux-amd64.tar.gz
+./clicktamer-linux-amd64
+```
+
+Linux needs a running BlueZ service, an enabled Bluetooth adapter, and write
+access to `/dev/uinput` for your user. If the device is missing, load the
+`uinput` module with `sudo modprobe uinput`. Use your distribution's device
+permissions to grant access. Open and focus your cycling app manually.
+ClickTamer sends keys to the focused window. Automatic launch and window
+targeting are Windows features.
+
+Close Zwift or the Companion app, then wake the Click pods while scanning.
+Use `ctrl+z` in the status screen to sign in when the left pod needs an unlock.
+To build from the `dev-linux` branch, run `just build-linux`.
+
 ## Quick start
+
+These steps use the Windows release. For Linux, see [Linux AMD64](#linux-amd64).
 
 1. **Download** the latest release: grab `clicktamer.exe` from the
    [Releases](../../releases) page and put it whereever you want to 
@@ -89,10 +113,11 @@ up: a controller switched on 10 minutes later still gets picked up.
 
 ## Configuration
 
-The config lives at `%LocalAppData%\clicktamer\config.yml` (or pass `-config`;
-an explicit path must already exist). The default file is created on first run,
-and a config from the old location next to the exe is migrated there. One file:
-`loglevel:`, an optional `defaultProfile:`, and a `profiles:` map.
+On Windows the config lives at `%LocalAppData%\clicktamer\config.yml`. On Linux
+it lives at `~/.config/clicktamer/config.yml` or under `$XDG_CONFIG_HOME` if set.
+On first run ClickTamer migrates a legacy `config.yaml` beside the executable or
+creates the default file. Pass `-config` to use an existing file elsewhere.
+The file contains `loglevel:`, an optional `defaultProfile:`, and a `profiles:` map.
 
 ```yaml
 loglevel: info # debug | info | warn | error
@@ -364,13 +389,13 @@ connects are serialized so they never overlap an active scan.
 | LEFT pod does nothing                      | It is off in single mode. Press `ctrl+k` on the status screen to switch to DOUBLE (the header shows the mode).                                                                                                                                                                                                                                                                                                                                  |
 | Log warns "legacy flat format"             | The profile uses the old layout (buttons directly under the profile name). It still works; move its buttons under `single:` and `double:` to silence the warning (see Controller modes).                                                                                                                                                                                                                                                  |
 
-Not a HID keyboard: Zwift itself won't see the Click as a Bluetooth keyboard
-here — only the Windows foreground app receives the simulated keys.
+ClickTamer emits simulated keystrokes locally. The Click does not advertise as
+a Bluetooth keyboard.
 
 ## Development
 
-Requires Go ≥ 1.27 (see `go.mod`). No BLE hardware needed to develop: tests
-run on any OS, real scanning needs Windows.
+Requires Go ≥ 1.27 (see `go.mod`). Tests run without BLE hardware. Real scanning
+is supported on Windows and Linux.
 
 Tasks run through [`just`](https://github.com/casey/just) (required — install it
 first):
@@ -381,9 +406,11 @@ first):
 | `just vet`                           | `go vet` for the host and `GOOS=windows`                        |
 | `just fmt`                           | `gofmt -w .`                                                    |
 | `just build`                         | build the Windows amd64 exe (plus the icon resource)            |
+| `just build-linux`                   | build `dist/clicktamer-linux-amd64`                              |
 | `just sanity`                        | local: `fmt` then `test` `vet` `build`                          |
 | `just ci`                            | check-only `fmt-check` `vet` `test` `build`, no source rewrites |
-| `just run`                           | run from source (Windows host); `go run . -v` for raw frames    |
+| `just ci-linux`                      | on Linux, check formatting, vet, test and build for Linux AMD64 |
+| `just run`                           | run from source; `go run . -v` for raw frames                   |
 | `just demo`                          | TUI with mock toggle keys, no Bluetooth                         |
 | `just release VERSION`               | build the release assets into `dist/` (POSIX; used by CI)       |
 | `just scoop-manifest VERSION SHA256` | render the Scoop extras manifest to stdout                      |
