@@ -3,7 +3,7 @@
   <h1>clicktamer</h1>
   <p><strong>Your Zwift Click V2 becomes a keyboard for any cycling app on Windows.</strong></p>
   <p>
-    <a href="https://github.com/Tom-Webstar/clicktamer/actions/workflows/release.yml?query=branch%3Amain"><img src="https://github.com/Tom-Webstar/clicktamer/actions/workflows/release.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://github.com/Tom-Webstar/clicktamer/actions/workflows/ci.yml"><img src="https://github.com/Tom-Webstar/clicktamer/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
     <a href="https://github.com/Tom-Webstar/clicktamer/releases/latest"><img src="https://img.shields.io/github/v/release/Tom-Webstar/clicktamer?sort=semver" alt="Latest release"></a>
     <a href="https://scoop.sh"><img src="https://img.shields.io/badge/scoop-extras-4B8BBE" alt="Scoop (extras bucket)"></a>
     <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Platform: Windows">
