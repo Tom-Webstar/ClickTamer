@@ -1,0 +1,28 @@
+name: Linux AMD64
+
+on:
+  push:
+    branches: [dev-linux]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: extractions/setup-just@v4
+      - name: Linux tests, vet and build
+        run: just ci-linux
+      - name: Package executable with its permissions
+        run: tar -czf dist/clicktamer-linux-amd64.tar.gz -C dist clicktamer-linux-amd64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clicktamer-linux-amd64
+          path: dist/clicktamer-linux-amd64.tar.gz
+          if-no-files-found: error

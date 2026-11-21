@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -13,6 +14,16 @@ import (
 	"clicktamer/internal/launch"
 	"clicktamer/internal/tui"
 )
+
+func loadProfile(path, name string) (config.Config, error) {
+	cfg, err := config.Load(path, name)
+	if runtime.GOOS == "linux" {
+		// Keep Windows focus/launch settings in the file for shared profiles.
+		cfg.FocusProgramNamePrefixOnClick = ""
+		cfg.StartProgram = ""
+	}
+	return cfg, err
+}
 
 // profileState is the live state shared between the TUI's switch callback and
 // the session goroutines. mu guards the reload/swap; it is never held across
@@ -148,7 +159,7 @@ func (s *profileState) installLocked(next config.Config) {
 // state intact, logs, and only surfaces on the screen.
 func (s *profileState) apply(name string, launchProgram bool) {
 	s.mu.Lock()
-	next, err := config.Load(s.path, name)
+	next, err := loadProfile(s.path, name)
 	if err != nil {
 		prog := s.prog
 		s.mu.Unlock()

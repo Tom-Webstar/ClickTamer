@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -229,6 +230,31 @@ func TestReloadErrorKeepsState(t *testing.T) {
 
 	if b, _ := km.Get("A"); b.Token != "space" {
 		t.Fatalf("bindings changed: %v", b)
+	}
+}
+
+func TestReloadUsesSupportedDesktopActions(t *testing.T) {
+	path := writeProfileConfig(t, `profiles:
+  test:
+    A: space
+    focusProgramNamePrefixOnClick: Notepad
+    startProgram: notepad.exe
+`)
+	s := &profileState{path: path, cur: config.Config{Profile: "test"}, km: ble.NewKeyMap(nil)}
+	t.Cleanup(func() { keys.SetWindowTarget("") })
+	s.reload()
+
+	wantFocus, wantProgram := "Notepad", "notepad.exe"
+	if runtime.GOOS == "linux" {
+		wantFocus, wantProgram = "", ""
+	}
+	cfg := s.current()
+	if cfg.FocusProgramNamePrefixOnClick != wantFocus || cfg.StartProgram != wantProgram {
+		t.Fatalf("focus = %q, start program = %q, want %q and %q",
+			cfg.FocusProgramNamePrefixOnClick, cfg.StartProgram, wantFocus, wantProgram)
+	}
+	if b, ok := s.km.Get("A"); !ok || b.Token != "space" {
+		t.Fatalf("reloaded binding = %v, present = %v", b, ok)
 	}
 }
 

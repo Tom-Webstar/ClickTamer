@@ -8,6 +8,11 @@ default:
 test:
     go test -race ./...
 
+# The upstream integration suite requires a writable /dev/uinput.
+test-uinput:
+    go -C internal/uinput vet ./...
+    go -C internal/uinput test -race -run '^(TestCloseDeviceClosesFileAfterDestroyFailure|TestKeyboardAdvertisesKeyRepeat)$' ./...
+
 vet:
     go vet ./...
     GOOS=windows go vet ./...
@@ -34,6 +39,16 @@ build: gen-icon
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
         -ldflags="-s -w" \
         -o dist/clicktamer.exe .
+
+# Linux AMD64 is built separately from the Windows release.
+build-linux:
+    mkdir -p dist
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
+        -ldflags="-s -w" \
+        -o dist/clicktamer-linux-amd64 .
+
+# Check and build the Linux branch without touching Windows release assets.
+ci-linux: fmt-check vet test test-uinput build-linux
 
 # Local: formats, then checks + builds.
 sanity: fmt test vet build

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -224,17 +225,35 @@ func ScanHealthy() bool { return !scanBroken.Load() }
 // scanBurst runs one burst of scanFn and returns the freshly discovered
 // controllers (not known to known() yet) in discovery order.
 func scanBurst(burst time.Duration, known func(addr string) bool) (map[string]Target, []string, error) {
+	return scanBurstOn(runtime.GOOS, burst, known)
+}
+
+func scanBurstOn(platform string, burst time.Duration, known func(addr string) bool) (map[string]Target, []string, error) {
 	c := &collector{pending: map[string]Target{}}
 	healthy := false // stays false if scanFn panics (recovered below, err stays nil)
 	err := func() (err error) {
 		// Covers a panicking scanFn call (same goroutine); the callback and
 		// the StopScan timer each recover their own — they run elsewhere.
 		defer recoverLog("scan")
+		stopDone := make(chan struct{})
 		timer := time.AfterFunc(burst, func() {
-			defer recoverLog("stop scan") // AfterFunc runs on its own goroutine
-			stopScanFn()
+			defer close(stopDone)
+			Guarded("stop scan", stopScanFn)
 		})
-		defer timer.Stop()
+		defer func() {
+			stopped := timer.Stop()
+			if platform != "linux" {
+				return
+			}
+			if !stopped {
+				<-stopDone
+			}
+			// BlueZ can return during discovery setup with its scan still
+			// marked active. Clear that state after the timer has stopped.
+			if !healthy {
+				Guarded("stop failed scan", stopScanFn)
+			}
+		}()
 		err = scanFn(func(a *bluetooth.Adapter, r bluetooth.ScanResult) {
 			// This runs on the platform's event goroutine, where scanBurst's
 			// defers can never reach it: a panic here would kill the process.
@@ -461,8 +480,9 @@ func SideSeenRecently(p zwift.Pod, within time.Duration) bool {
 	return ok && nowFn().Sub(at) <= within
 }
 
-// endSession tears down a connection safely: it Disconnects ONLY if the
-// device still answers the probe. When the PC's Bluetooth is switched off,
+// endSession disconnects directly through BlueZ, which handles an already
+// closed link as a D-Bus error. On Windows, disconnect only if the device
+// still answers the probe. When the PC's Bluetooth is switched off,
 // tinygo's ConnectionStatusChanged handler has already run Device.Disconnect()
 // and closed the GATT session; a second Disconnect on the freed session is a
 // use-after-free that kills the process with an unrecoverable AV (0xc0000005,
@@ -470,7 +490,11 @@ func SideSeenRecently(p zwift.Pod, within time.Duration) bool {
 // session — service discovery does NOT (listing services AVs on the freed
 // COM object, observed on Windows), so the probe is always a write, never a
 // discover. probe/disconnect are injectable for tests.
-func endSession(where string, probe func() error, disconnect func()) {
+func endSession(platform, where string, probe func() error, disconnect func()) {
+	if platform == "linux" {
+		disconnect()
+		return
+	}
 	if err := probe(); err != nil {
 		slog.Debug("device no longer answers — skipping disconnect", "where", where, "probe", err)
 		return
@@ -487,29 +511,31 @@ func Session(t Target, km *KeyMap, solver ChallengeSolver) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		// Probe with a keepalive write, not service discovery: on a dead session
-		// (BT off) DiscoverServices itself AVs on the freed COM object (0xc0000005,
-		// same family as the Disconnect crash — observed during the podwatch run),
-		// while writes fail gracefully. So probe with the same write the keepalive
-		// loop queues and Disconnect only when it answers. A transient write
-		// failure on a LIVE device just defers the release of the controller's
-		// single connection slot to the device's own sleep timeout (~56s) — losing
-		// the slot for a minute beats an unrecoverable crash.
-		endSession("session "+t.Label, func() error {
-			if syncRx == nil {
-				return errors.New("no sync-rx characteristic to probe")
-			}
-			_, err := writeChar(syncRx, keep)
-			return err
-		}, func() { _ = dev.Disconnect() })
-	}()
+	defer endSession(runtime.GOOS, "session "+t.Label, func() error {
+		_, err := writeChar(syncRx, keep)
+		return err
+	}, func() { _ = dev.Disconnect() })
 	// A session ends when a keepalive write fails (a real disconnect) — release
 	// the keys still held so a dropped controller can't leave them stuck down.
 	// The held count is shared with the other pod's session, so a key that
 	// sibling still sees pressed stays down until that sibling's own release.
 	hk := holdKeys(keys.Down, keys.Up)
-	defer hk.ReleaseAll()
+	handler := ButtonHandler(t.Label, km, hk.Press, hk.Release)
+	var stopButtons func()
+	if runtime.GOOS == "linux" {
+		// BlueZ subscriptions own D-Bus listeners that Disconnect does not
+		// remove. Stop even after a failed StartNotify, which can leave a
+		// listener registered. These defers run after the held keys are released.
+		defer stopBlueZNotifications(t.Label, async)
+		defer stopBlueZNotifications(t.Label, syncTx)
+		handler, stopButtons = guardButtonNotifications(handler)
+	}
+	defer func() {
+		if stopButtons != nil {
+			stopButtons()
+		}
+		hk.ReleaseAll()
+	}()
 
 	// Activation sequence (verified on Click V2 hardware).
 	activation := [][]byte{
@@ -598,7 +624,6 @@ func Session(t Target, km *KeyMap, solver ChallengeSolver) error {
 		solves.push(payload)
 	}
 
-	handler := ButtonHandler(t.Label, km, hk.Press, hk.Release)
 	// activity tracks the pod's last own transmission (any received frame). It
 	// gates the proactive pod reset so an active session is never rebooted.
 	// Notification callbacks run on the BLE stack's goroutine while the
@@ -755,6 +780,40 @@ func asyncNotify(onChallenge func([]byte), activity func(), bh func([]byte)) fun
 	}
 }
 
+// guardButtonNotifications drains any active button handler and rejects late
+// frames so tearing down a session cannot leave a fresh key held. D-Bus calls
+// stay outside this lock.
+func guardButtonNotifications(handle func([]byte)) (notify func([]byte), stop func()) {
+	var mu sync.Mutex
+	stopped := false
+	notify = func(frame []byte) {
+		mu.Lock()
+		defer mu.Unlock()
+		if !stopped {
+			handle(frame)
+		}
+	}
+	stop = func() {
+		mu.Lock()
+		stopped = true
+		mu.Unlock()
+	}
+	return notify, stop
+}
+
+func stopBlueZNotifications(label string, characteristic *bluetooth.DeviceCharacteristic) {
+	if characteristic == nil {
+		return
+	}
+	// TinyGo's BlueZ goroutine reads the original receiver's signal channel
+	// when it starts. Disable on a copy to close that channel while keeping
+	// the original field stable, so a late goroutine still sees the closed channel.
+	subscription := *characteristic
+	if err := subscription.EnableNotifications(nil); err != nil {
+		slog.Debug("stop notifications failed", "controller", label, "characteristic", characteristic.UUID().String(), "error", err)
+	}
+}
+
 // writeChar writes without response, falling back to write-with-response for
 // characteristics that do not support the former.
 func writeChar(c *bluetooth.DeviceCharacteristic, b []byte) (int, error) {
@@ -777,28 +836,19 @@ func connect(t Target) (dev bluetooth.Device, async, syncRx, syncTx *bluetooth.D
 	if err != nil {
 		return
 	}
-	// fail tears the fresh connection down through endSession's probe: on a
-	// live device the probe (a keepalive write) succeeds and Disconnect frees
-	// the controller's single connection slot; when BT died mid-connect the
-	// write fails and Disconnect — which would AV on the freed session — is
-	// skipped. Service discovery is NOT a safe probe: on a freed session it
-	// AVs (0xc0000005, observed on Windows). When no characteristic is in hand
-	// there is nothing safe to write to, so skip Disconnect and let the device
-	// release the slot on its own link timeout.
+	// WinRT needs a writable characteristic to probe. If discovery failed
+	// before finding one, let the controller release its connection slot on
+	// its own link timeout. BlueZ can disconnect even without a characteristic.
 	fail := func(e error) {
 		probe := syncRx
 		if probe == nil {
 			probe = async
 		}
-		if probe != nil {
-			endSession("connect "+t.Label,
-				func() error {
-					_, we := writeChar(probe, keep)
-					return we
-				}, func() { _ = dev.Disconnect() })
-		} else {
-			slog.Debug("no characteristic available to probe — skipping disconnect (slot releases on the device's own link timeout)", "controller", t.Label)
-		}
+		endSession(runtime.GOOS, "connect "+t.Label,
+			func() error {
+				_, we := writeChar(probe, keep)
+				return we
+			}, func() { _ = dev.Disconnect() })
 		err = e
 	}
 

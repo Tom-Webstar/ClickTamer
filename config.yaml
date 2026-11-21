@@ -14,7 +14,7 @@ defaultMode: single
 # loglevel: debug | info | warn | error — -v on the CLI forces debug.
 loglevel: info
 #
-# focusProgramNamePrefixOnClick (per profile): bring this program's window to the
+# focusProgramNamePrefixOnClick (per profile, Windows): bring this program's window to the
 # foreground on every button press so the tapped key lands in it. The value is
 # matched against the program .exe name as a case-insensitive PREFIX (so
 # "MyWhoosh" matches "MyWhooshHD.exe") and against the window title as a
@@ -25,7 +25,7 @@ loglevel: info
 #   focusProgramNamePrefixOnClick: MyWhoosh    # `MyWhoosh` prefix of MyWhooshHD.exe
 #   focusProgramNamePrefixOnClick: ZwiftApp    # named by its .exe
 #
-# startProgram (per profile): launch this program once Bluetooth is up, and on
+# startProgram (per profile, Windows): launch this program once Bluetooth is up, and on
 # profile switch. Accepts an .exe path or bare .exe name (PATH / App Paths),
 # a .bat/.cmd, a .ps1, or an MS Store AUMID (PackageFamilyName!AppId).
 # null (or "") disables it. A missing path logs a warning and is skipped;

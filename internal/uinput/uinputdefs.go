@@ -25,6 +25,7 @@ const (
 	evKey     = 0x01
 	evRel     = 0x02
 	evAbs     = 0x03
+	evRep     = 0x14
 	relX      = 0x0
 	relY      = 0x1
 	relHWheel = 0x6

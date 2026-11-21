@@ -8,7 +8,7 @@ import (
 
 func TestEndSessionSkipsDisconnectWhenProbeFails(t *testing.T) {
 	probes, disconnects := 0, 0
-	endSession("t", func() error { probes++; return errors.New("device gone") },
+	endSession("windows", "t", func() error { probes++; return errors.New("device gone") },
 		func() { disconnects++ })
 	if probes != 1 || disconnects != 0 {
 		t.Fatalf("probes=%d disconnects=%d, want 1/0", probes, disconnects)
@@ -17,7 +17,18 @@ func TestEndSessionSkipsDisconnectWhenProbeFails(t *testing.T) {
 
 func TestEndSessionDisconnectsWhenProbeOK(t *testing.T) {
 	disconnects := 0
-	endSession("t", func() error { return nil }, func() { disconnects++ })
+	endSession("windows", "t", func() error { return nil }, func() { disconnects++ })
+	if disconnects != 1 {
+		t.Fatalf("disconnects=%d, want 1", disconnects)
+	}
+}
+
+func TestEndLinuxSessionDisconnectsWithoutProbe(t *testing.T) {
+	disconnects := 0
+	endSession("linux", "t", func() error {
+		t.Error("BlueZ should disconnect without writing to the device")
+		return errors.New("device gone")
+	}, func() { disconnects++ })
 	if disconnects != 1 {
 		t.Fatalf("disconnects=%d, want 1", disconnects)
 	}

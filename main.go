@@ -1,9 +1,9 @@
-// Zwift Click V2 BLE listener for Windows (WinRT via tinygo.org/x/bluetooth).
+// Zwift Click V2 BLE listener for Windows (WinRT) and Linux (BlueZ).
 //
 //	go run . [-v] [-config path] [-p mywhoosh] [-log clicktamer.log]
 //
 // Button presses are logged and, if config.yaml maps them, typed as real
-// keyboard keys (Windows SendInput). Log level comes from config.yaml
+// keyboard keys (Windows SendInput or Linux uinput). Log level comes from config.yaml
 // (loglevel: debug|info|warn|error); -v forces debug.
 //
 // Click V2 is a pair of devices (LEFT: arrows + minus, RIGHT: Y/Z/A/B + plus).
@@ -54,7 +54,7 @@ var version = "dev"
 var scanFor = 10 * time.Second
 
 func main() {
-	configPath := flag.String("config", defaultConfigPath(), "YAML file with key mapping profiles (default: %LocalAppData%\\clicktamer\\config.yml, created from the built-in default if missing; an explicit path must already exist)")
+	configPath := flag.String("config", defaultConfigPath(), "YAML file with key mapping profiles. The default is created if missing. An explicit path must already exist.")
 	var profile string
 	flag.StringVar(&profile, "p", "", "config profile to use (default: defaultProfile from the config, else mywhoosh)")
 	var verbose bool
@@ -82,7 +82,7 @@ func main() {
 		slog.Error("config file not found — -config must point at an existing file", "path", *configPath, "error", err)
 		os.Exit(1)
 	}
-	cfg, err := config.Load(configFile, profile)
+	cfg, err := loadProfile(configFile, profile)
 	level := cfg.Level
 	if verbose {
 		level = slog.LevelDebug
@@ -257,7 +257,7 @@ func main() {
 	for enabled := false; !enabled; {
 		ble.Guarded("enable BLE adapter", func() {
 			if err := ble.Enable(); err != nil {
-				slog.Error("Bluetooth is OFF or unavailable — turn it ON (Windows: Settings > Bluetooth & devices); retrying in 5s", "error", err)
+				slog.Error("Bluetooth is off or unavailable. Turn it on in your system settings. Retrying in 5s", "error", err)
 			} else {
 				enabled = true
 			}

@@ -49,6 +49,19 @@ func TestAsyncNotifySkipsEmpty(t *testing.T) {
 	}
 }
 
+func TestStoppedSessionIgnoresLateButtonFrames(t *testing.T) {
+	frames := 0
+	handle, stop := guardButtonNotifications(func([]byte) { frames++ })
+
+	handle([]byte{0x23})
+	stop()
+	handle([]byte{0x23})
+
+	if frames != 1 {
+		t.Fatalf("handled %d frames, want only the frame received before stop", frames)
+	}
+}
+
 func TestKeepalivePayloads(t *testing.T) {
 	// The keepalive re-sends the raw "RideOn" opcode frame to sync-rx. The
 	// activation trio still uses "RideOn" 02 03 / 00 08 00 / 00 08 10,
