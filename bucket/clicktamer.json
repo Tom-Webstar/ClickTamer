@@ -1,12 +1,12 @@
 {
-    "version": "0.8.1",
+    "version": "0.9.0",
     "description": "Turn a Zwift Click V2 controller into a Bluetooth keyboard for indoor cycling apps or any apps.",
     "homepage": "https://github.com/Tom-Webstar/clicktamer",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/Tom-Webstar/clicktamer/releases/download/0.8.1/clicktamer.exe",
-            "hash": "12c5a94e3d5f79081caad073d2317493efe920de3f3ee1352e97eebdf699d123"
+            "url": "https://github.com/Tom-Webstar/clicktamer/releases/download/0.9.0/clicktamer.exe",
+            "hash": "306ac8edb408183f26f45440c58a91dc81e5191d1d897bde7b0ef1d4509660b8"
         }
     },
     "bin": "clicktamer.exe",
