@@ -1,9 +1,12 @@
 package ble
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"tinygo.org/x/bluetooth"
@@ -95,6 +98,74 @@ func TestScanBurstScanCallPanicRecovered(t *testing.T) {
 	if err != nil || len(order) != 0 || len(pending) != 0 {
 		t.Fatalf("pending=%d order=%d err=%v, want 0/0/nil", len(pending), len(order), err)
 	}
+}
+
+func TestFailedLinuxScanBurstClearsAdapter(t *testing.T) {
+	for _, failure := range []struct {
+		name string
+		fail func() error
+	}{
+		{"error", func() error { return errors.New("discovery failed") }},
+		{"panic", func() error { panic("discovery panicked") }},
+	} {
+		t.Run(failure.name, func(t *testing.T) {
+			scanning, first := false, true
+			stubScan(t, func(scanCallback) error {
+				if scanning {
+					return errors.New("already scanning")
+				}
+				if first {
+					first = false
+					scanning = true // BlueZ marks the scan active before discovery succeeds.
+					return failure.fail()
+				}
+				return nil
+			})
+			stubStop(t, func() { scanning = false })
+			none := func(string) bool { return false }
+			scanBurstOn("linux", time.Hour, none)
+			if _, _, err := scanBurstOn("linux", time.Hour, none); err != nil {
+				t.Fatalf("next scan failed: %v", err)
+			}
+		})
+	}
+}
+
+func TestFailedLinuxScanBurstWaitsForTimerStop(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		timerStarted, finishTimer := make(chan struct{}), make(chan struct{})
+		burstDone := make(chan struct{})
+		var stops atomic.Int32
+		stubStop(t, func() {
+			if stops.Add(1) == 1 {
+				close(timerStarted)
+				<-finishTimer
+			}
+		})
+		stubScan(t, func(scanCallback) error {
+			<-timerStarted
+			return errors.New("discovery failed")
+		})
+		go func() {
+			defer close(burstDone)
+			scanBurstOn("linux", time.Second, func(string) bool { return false })
+		}()
+		<-timerStarted
+		synctest.Wait()
+		select {
+		case <-burstDone:
+			t.Error("scan returned while the stop timer was still running")
+		default:
+		}
+		if n := stops.Load(); n != 1 {
+			t.Errorf("before timer completes, got %d stop calls, want 1", n)
+		}
+		close(finishTimer)
+		<-burstDone
+		if n := stops.Load(); n != 2 {
+			t.Errorf("after timer completes, got %d stop calls, want 2", n)
+		}
+	})
 }
 
 // A late callback firing after Scan returned must not race the reader of the
