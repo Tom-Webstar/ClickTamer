@@ -412,6 +412,8 @@ first):
 | `just fmt`                           | `gofmt -w .`                                                    |
 | `just build [VERSION]`               | build `dist/clicktamer-win-amd64-VERSION.exe` with the Windows icon |
 | `just build-linux [VERSION]`         | build `dist/clicktamer-linux-amd64-VERSION`                      |
+| `just build-darwin-arm64 [VERSION]`  | build `dist/clicktamer-darwin-arm64-VERSION` for Apple Silicon   |
+| `just build-darwin-amd64 [VERSION]`  | build `dist/clicktamer-darwin-amd64-VERSION` for Intel            |
 | `just sanity`                        | local: `fmt` then `test` `vet` `build`                          |
 | `just ci`                            | check-only `fmt-check` `vet` `test` `build`, no source rewrites |
 | `just ci-linux`                      | on Linux, check formatting, vet, test and build for Linux AMD64 |
@@ -423,6 +425,9 @@ first):
 | `just update-deps`                   | blanket `go get -u ./...` + `go mod tidy` (BLE libs included)   |
 
 `just --list` shows every recipe.
+
+Both Darwin build commands run on macOS and use cgo with Apple's Xcode
+Command Line Tools.
 
 When `VERSION` is omitted, the build recipes use `git describe` with a version
 tag and fall back to `0.0.0-dev` when no version tag is available. Each build

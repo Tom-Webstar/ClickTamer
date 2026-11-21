@@ -58,6 +58,19 @@ build-linux version=build_version: (_check-version version)
         -ldflags={{quote("-s -w -X main.version=" + version)}} \
         -o {{quote("dist/" + linux_prefix + version)}} .
 
+# macOS Apple Silicon build using Xcode Command Line Tools.
+build-darwin-arm64 version=build_version: (_build-darwin "arm64" version)
+
+# macOS Intel build using Xcode Command Line Tools.
+build-darwin-amd64 version=build_version: (_build-darwin "amd64" version)
+
+_build-darwin arch version: (_check-version version)
+    @if [ {{quote(os())}} != 'macos' ]; then printf '%s\n' 'Darwin builds require macOS with Xcode Command Line Tools.' >&2; exit 1; fi
+    mkdir -p dist
+    GOOS=darwin GOARCH={{quote(arch)}} CGO_ENABLED=1 CC=clang go build -trimpath \
+        -ldflags={{quote("-s -w -X main.version=" + version)}} \
+        -o {{quote("dist/clicktamer-darwin-" + arch + "-" + version)}} .
+
 # Check and build the Linux branch without touching Windows release assets.
 ci-linux version=build_version: fmt-check vet test test-uinput (build-linux version)
 

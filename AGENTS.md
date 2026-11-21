@@ -58,8 +58,12 @@ keyboard input on Windows. Runs on Windows only; developed cross-platform.
 - Lint, Test, Build (local): `just sanity`
 - CI (check-only): `just ci`
 - Build Windows AMD64 with `just build [VERSION]` and Linux AMD64 with
-  `just build-linux [VERSION]`. Without a version argument, these recipes use
-  `git describe` with a version tag or fall back to `0.0.0-dev`.
+  `just build-linux [VERSION]`.
+- Build on macOS with `just build-darwin-arm64 [VERSION]` for Apple Silicon or
+  `just build-darwin-amd64 [VERSION]` for Intel. Both require Apple's Xcode
+  Command Line Tools and use cgo.
+- Build commands use `git describe` with a version tag when no version is
+  supplied, falling back to `0.0.0-dev`.
 - Deps: `just update-deps` (blanket `go get -u ./...`; BLE libs included —
   hardware re-verify before a release with BLE bumps)
 - List tasks: `just --list`

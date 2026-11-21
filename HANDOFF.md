@@ -1,5 +1,16 @@
 # Handoff
 
+## 2026-11-21 — Darwin build commands
+
+`just build-darwin-arm64 [VERSION]` and `just build-darwin-amd64 [VERSION]`
+build versioned executables in `dist/`. The recipes use cgo and Apple Clang
+on macOS and share the Git-derived version default with the other targets.
+
+Dry runs verify the architecture, version stamp, and output name for each
+recipe. The host guard reports the macOS toolchain requirement on Windows.
+Next, run both recipes on macOS and verify their Mach-O architectures and
+Quartz key delivery with Accessibility permission.
+
 ## 2026-11-21 — Quartz keyboard wiring
 
 The macOS cgo build routes key-down, key-up, and forced releases through
@@ -11,9 +22,9 @@ focus settings inactive at runtime.
 
 The Quartz dispatch tests exercise every configured key via a fake event
 poster. Go selects the native backend for both Darwin architectures.
-Next, add the native Darwin builds and verify key delivery and release on
-macOS with Accessibility permission. A full Darwin test run also needs the
-BLE scan fixture to use CoreBluetooth's UUID address type.
+Key delivery and release still need a macOS check with Accessibility
+permission. A full Darwin test run also needs the BLE scan fixture to use
+CoreBluetooth's UUID address type.
 
 ## 2026-11-21 — Versioned build filenames
 
