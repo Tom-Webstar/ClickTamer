@@ -24,7 +24,7 @@ func TestLinuxKeyCodes(t *testing.T) {
 		"enter": uinput.KeyEnter, "space": uinput.KeySpace,
 		"tab": uinput.KeyTab, "esc": uinput.KeyEsc,
 		"backspace": uinput.KeyBackspace,
-		"shift": uinput.KeyLeftshift, "ctrl": uinput.KeyLeftctrl,
+		"shift":     uinput.KeyLeftshift, "ctrl": uinput.KeyLeftctrl,
 		"alt": uinput.KeyLeftalt, "capslock": uinput.KeyCapslock,
 		"-": uinput.KeyMinus, "=": uinput.KeyEqual,
 		",": uinput.KeyComma, ".": uinput.KeyDot,
@@ -51,6 +51,7 @@ func TestLinuxKeyCodes(t *testing.T) {
 type fakeLinuxKeyboard struct {
 	events []string
 }
+
 func (f *fakeLinuxKeyboard) KeyPress(code int) error {
 	f.events = append(f.events, fmt.Sprint("press:", code))
 	return nil
