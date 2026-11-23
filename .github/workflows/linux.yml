@@ -21,7 +21,7 @@ jobs:
         run: just ci-linux
       - name: Package executable with its permissions
         run: tar -czf dist/clicktamer-linux-amd64.tar.gz -C dist clicktamer-linux-amd64
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: clicktamer-linux-amd64
           path: dist/clicktamer-linux-amd64.tar.gz
